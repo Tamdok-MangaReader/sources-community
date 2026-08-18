@@ -32,14 +32,7 @@ docs/                  Author documentation
 
 ## Documentation
 
-| Guide | Description |
-|-------|-------------|
-| [docs/index.md](docs/index.md) | Overview and links |
-| [docs/getting-started.md](docs/getting-started.md) | Create your first source |
-| [docs/api-reference.md](docs/api-reference.md) | Source module API |
-| [docs/home-layout.md](docs/home-layout.md) | Home screen components |
-| [docs/filters-and-settings.md](docs/filters-and-settings.md) | Search filters and user settings |
-| [docs/publishing.md](docs/publishing.md) | Build, test, and publish |
+See the [wiki](https://github.com/Tamdok-MangaReader/sources-community/wiki)
 
 ## Package format (`.tamdok`)
 
