@@ -33,6 +33,31 @@ function absUrl(base, href) {
     return href;
   }
 }
+function isHttpUrl(value) {
+  return typeof value === "string" && /^https?:\/\//i.test(value);
+}
+/** Unwrap Astro serialized props (`[0, value]` / `[1, array]`) without treating URL strings as arrays. */
+function astroUnwrap(value) {
+  let current = value;
+  for (let i = 0; i < 6; i += 1) {
+    if (!Array.isArray(current) || current.length < 2) break;
+    if (current[0] !== 0 && current[0] !== 1) break;
+    current = current[1];
+  }
+  return current;
+}
+function pageUrlFromItem(item) {
+  const unwrapped = astroUnwrap(item);
+  if (isHttpUrl(unwrapped)) return unwrapped;
+  if (!unwrapped || typeof unwrapped !== "object") return undefined;
+  const url = astroUnwrap(unwrapped.url);
+  return isHttpUrl(url) ? url : undefined;
+}
+function pagesFromItems(items) {
+  const list = astroUnwrap(items);
+  if (!Array.isArray(list)) return [];
+  return list.map(pageUrlFromItem).filter(Boolean).map((url) => ({ url }));
+}
 function parseStatus(text) {
   switch (text?.toLowerCase()) {
     case "ongoing":
@@ -293,47 +318,65 @@ const source = {
       const island = html.querySelector('astro-island[component-url*="ChapterListReact"], astro-island[opts*="ChapterListReact"]');
       const propsRaw = island?.getAttribute("props");
       if (propsRaw) {
-        const json = JSON.parse(propsRaw);
-        const chaptersArr = json?.chapters?.[1];
-        if (Array.isArray(chaptersArr)) {
-          updated.chapters = chaptersArr.map((entry) => {
-            const obj = entry?.[1];
-            if (!obj) return null;
-            const chapterNumber = Number(obj.number?.[1]);
-            if (Number.isNaN(chapterNumber)) return null;
-            const key = String(chapterNumber);
-            let dateUploaded;
-            const published = obj.published_at?.[1];
-            if (typeof published === "string") {
-              const normalized = published.includes(".") ? `${published.split(".")[0]}Z` : published;
-              dateUploaded = Math.floor(new Date(normalized).getTime() / 1e3);
-            }
-            return {
-              key,
-              chapterNumber,
-              dateUploaded,
-              url: getChapterUrl(key, manga.key),
-              locked: Boolean(obj.is_locked?.[1])
-            };
-          }).filter(Boolean);
+        try {
+          const json = JSON.parse(propsRaw);
+          const chaptersArr = astroUnwrap(json?.chapters);
+          if (Array.isArray(chaptersArr)) {
+            updated.chapters = chaptersArr.map((entry) => {
+              const obj = astroUnwrap(entry);
+              if (!obj || typeof obj !== "object") return null;
+              const chapterNumber = Number(astroUnwrap(obj.number));
+              if (Number.isNaN(chapterNumber)) return null;
+              const key = String(chapterNumber);
+              let dateUploaded;
+              const published = astroUnwrap(obj.published_at);
+              if (typeof published === "string") {
+                const normalized = published.includes(".") ? `${published.split(".")[0]}Z` : published;
+                dateUploaded = Math.floor(new Date(normalized).getTime() / 1e3);
+              }
+              return {
+                key,
+                chapterNumber,
+                dateUploaded,
+                url: getChapterUrl(key, manga.key),
+                locked: Boolean(astroUnwrap(obj.is_locked) || astroUnwrap(obj.is_premium))
+              };
+            }).filter(Boolean);
+          }
+        } catch {
+        }
+      }
+      if (!updated.chapters?.length) {
+        const seen = new Set();
+        const chapters = html.querySelectorAll('a[href*="/chapter/"]').map((el) => {
+          const href = el.getAttribute("href");
+          const chapterUrl = absUrl(response.url, href ?? undefined);
+          const key = chapterUrl ? getChapterKey(chapterUrl) : undefined;
+          if (!key || seen.has(key)) return null;
+          seen.add(key);
+          const chapterNumber = Number(key);
+          return {
+            key,
+            chapterNumber: Number.isFinite(chapterNumber) ? chapterNumber : undefined,
+            url: getChapterUrl(key, manga.key)
+          };
+        }).filter(Boolean);
+        if (chapters.length > 0) {
+          chapters.sort((a, b) => (b.chapterNumber ?? 0) - (a.chapterNumber ?? 0));
+          updated.chapters = chapters;
         }
       }
     }
     return updated;
   },
   async getPageList(manga, chapter, ctx) {
-    const apiUrl = `${API_URL}/series/${manga.key}/chapters/${chapter.key}`;
+    const apiUrl = `${API_URL}/series/${encodeURIComponent(manga.key)}/chapters/${encodeURIComponent(chapter.key)}`;
     try {
       const apiResponse = await ctx.request.get(apiUrl);
       if (apiResponse.status === 200) {
         const json2 = await apiResponse.json();
-        const pages = json2?.data?.chapter?.pages;
-        if (Array.isArray(pages) && pages.length > 0) {
-          return pages.map((item) => {
-            const url = typeof item === "string" ? item : item?.url?.[1] ?? item?.url;
-            return url ? { url: String(url) } : null;
-          }).filter(Boolean);
-        }
+        const mapped = pagesFromItems(json2?.data?.chapter?.pages);
+        if (mapped.length > 0) return mapped;
       }
     } catch {
     }
@@ -341,13 +384,18 @@ const source = {
     const html = response.html();
     const island = html.querySelector('astro-island[component-url*="ChapterReader"], astro-island[opts*="ChapterReader"]');
     const propsRaw = island?.getAttribute("props");
-    if (!propsRaw) return [];
-    const json = JSON.parse(propsRaw);
-    const pageArr = json?.pages?.[1];
-    if (!Array.isArray(pageArr)) return [];
-    return pageArr.map((entry) => {
-      const url = entry?.[1]?.url?.[1];
-      return url ? { url: String(url) } : null;
+    if (propsRaw) {
+      try {
+        const mapped = pagesFromItems(JSON.parse(propsRaw)?.pages);
+        if (mapped.length > 0) return mapped;
+      } catch {
+      }
+    }
+    return html.querySelectorAll("img").map((el) => {
+      const src = el.getAttribute("src") ?? el.getAttribute("data-src");
+      if (!src || !src.includes("/asura-images/chapters/")) return null;
+      const url = absUrl(response.url, src);
+      return isHttpUrl(url) ? { url } : null;
     }).filter(Boolean);
   }
 };
