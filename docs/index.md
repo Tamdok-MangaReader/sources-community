@@ -29,8 +29,10 @@ The format is similar to [Aidoku](https://github.com/Aidoku-Community/sources), 
 |---------|-----------|-------------|
 | Language | JavaScript | Rust |
 | HTTP | `ctx.request.get/post/fetch` | Full net API in WASM |
+| Settings | `switch`, `select`, `text`, `link`, `group`, `section` | Full Aidoku schema incl. `multi-select`, `editable-list`, `page` |
 | Home | `getHome()` returns JSON layout | `get_home` + partial results |
 | Filters | `getFilters()` or `filters.json` | `filters.json` or dynamic |
+| Locked chapters | `locked: true` on chapter objects | Same |
 | ZIP/CBZ pages | `{ zipUrl, zipEntry? }` in `getPageList` | `PageContent::Zip` |
 | Canvas / WebView JS | Not available | Available in WASM host |
 

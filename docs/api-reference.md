@@ -16,10 +16,26 @@ The source module is exported as `module.exports = { source }`. All methods are 
 
 ```javascript
 const value = ctx.defaults.get("apiDomain", "https://api.example.com");
-await ctx.defaults.set("token", "abc");
+await ctx.defaults.set("sessionToken", "abc");
 ```
 
-Values come from source settings in the app (see [filters-and-settings.md](filters-and-settings.md)).
+- `get(key, fallback?)` reads user settings from the app, merged with defaults from `source.json`.
+- `set(key, value)` updates the in-memory value for the current app session only. It does **not** write back to Tamdok settings storage. Use it for temporary tokens or cached values during a request chain.
+
+See [filters-and-settings.md](filters-and-settings.md) for the settings schema.
+
+### ctx.request
+
+All three methods accept optional `RequestInit` (`method`, `headers`, `body`, …).
+
+```javascript
+const response = await ctx.request.post(url, {
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ q: query }),
+});
+```
+
+The runtime merges your headers with defaults (User-Agent, Referer, Accept). See [getting-started.md](getting-started.md#4-http-and-html).
 
 ---
 
@@ -82,7 +98,23 @@ Series details and chapter list.
 
 **viewer:** `default` | `ltr` | `rtl` | `webtoon` | `vertical`
 
-Descriptions may use `\n\n` blocks. The app can extract ratings (`★ 4.5`) and alt titles for libgroup-style sources.
+Descriptions may use `\n\n`-separated blocks. The app parses libgroup-style text:
+
+- A block with star characters and a numeric score → star rating on the detail screen
+- A block starting with `Альтернативные названия:` → alternative titles
+- The first other block → synopsis (supports `<br>` line breaks)
+
+Example:
+
+```javascript
+description: [
+  "Story summary with <br> line breaks.",
+  "★★★★✮ 4.5",
+  "Альтернативные названия:<br>Alt Title 1<br>Alt Title 2",
+].join("\n\n")
+```
+
+Mark chapters that require login with `locked: true`. Filter them in `getMangaUpdate` when a setting like `showLocked` is off.
 
 ### getPageList(manga, chapter, ctx)
 
@@ -97,9 +129,11 @@ Pages for the reader.
 // Text page
 { text: "..." }
 
-// ZIP/CBZ (app unpacks the archive)
-{ zipUrl: "https://.../chapter.zip", zipEntry?: "optional/path/filter" }
+// ZIP/CBZ (app downloads and unpacks image entries)
+{ zipUrl: "https://.../chapter.zip", zipEntry?: "optional/path/filter", thumbnail?: "..." }
 ```
+
+ZIP pages are expanded automatically: the app downloads the archive, extracts image files (sorted naturally), and converts them to data URLs for the reader. Use `zipEntry` to filter paths inside the archive.
 
 ---
 

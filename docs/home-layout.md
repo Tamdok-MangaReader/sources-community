@@ -48,13 +48,15 @@ Add `scrollerEntries` with a subtitle or put the rating in `description`:
   kind: "scroller",
   entries: [ manga1, manga2 ],
   scrollerEntries: [
-    { manga: manga1, subtitle: "★★★★☆ 4.2" },
+    { manga: manga1, homeCover: "https://.../cover.jpg", subtitle: "★★★★☆ 4.2" },
     { manga: manga2, subtitle: "★★★★★ 4.9" }
   ]
 }
 ```
 
 The app renders `MangaRatedScroller` with star ratings.
+
+Use `homeCover` when `getMangaUpdate` enrichment might replace the cover with banner art. The scroller keeps `homeCover` even after detail data is loaded.
 
 ## bigScroller
 

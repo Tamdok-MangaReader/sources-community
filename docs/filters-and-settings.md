@@ -2,11 +2,10 @@
 
 ## Search filters
 
-Filters define the search UI in Tamdok. Three options:
+Filters define the search UI in Tamdok. Two options (mutually exclusive):
 
-1. `filters.json` in the source folder (Aidoku format)
-2. `getFilters(ctx)` in JavaScript
-3. Combine both: JSON as base, JS for dynamic values
+1. **`filters.json`** in the source folder (Aidoku format) — used when `getFilters` is not implemented
+2. **`getFilters(ctx)`** in JavaScript — overrides static `filters.json` when present
 
 `build.mjs` packs `filters.json` into `.tamdok` when the file exists.
 
@@ -131,6 +130,21 @@ Example:
 
 For genres with repeated query params (Asura), check `filter.matchAll !== false`.
 
+### Filter definition options
+
+Extra fields on filter definitions (in `getFilters` or parsed from `filters.json`):
+
+| Field | Applies to | Effect |
+|-------|------------|--------|
+| `hideFromHeader` | all | Hide from the inline filter bar; show only in the full filter sheet |
+| `canAscend` | `sort` | Allow toggling ascending/descending direction |
+| `canExclude` | `multiSelect` | Allow excluding tags (not just including) |
+| `usesTagStyle` | `multiSelect` | Render options as tag chips |
+
+In `filters.json`, use `"type": "multi-select"` (hyphen). In JavaScript `getFilters`, use `type: "multiSelect"` (camelCase).
+
+When reading `range` filters, `from: 0` usually means “no minimum” (except for a filter with `id: "rating"`, where zero is valid).
+
 ---
 
 ## Source settings
@@ -237,18 +251,52 @@ if (!showLocked) {
 }
 ```
 
-### Supported UI types
+### Supported UI types (Tamdok JS sources)
 
-| type | App UI |
-|------|--------|
-| group | Section card with nested fields |
-| section | Section header in a flat settings list |
-| switch | Toggle |
-| select | Picker |
-| text | Text field |
-| link | Opens URL in browser |
+These types work in `source.json` for Tamdok JavaScript sources:
 
-Aidoku multi-select and editable-list settings have no dedicated UI yet, but defaults can be read in WASM sources. For Tamdok JS use switch/select/text/link.
+| type | Fields | App UI |
+|------|--------|--------|
+| `group` | `title`, `items[]` | Separate settings card (Aidoku-style) |
+| `section` | `id`, `title` | Section header inside a flat list |
+| `switch` | `id`, `title`, `default?`, `subtitle?` | Toggle |
+| `select` | `id`, `title`, `options[]`, `default?` | Picker |
+| `text` | `id`, `title`, `default?`, `placeholder?`, `secure?` | Text field (masked when `secure: true`) |
+| `link` | `id`, `title`, `url` | Opens URL in browser |
+
+Example with grouped server settings:
+
+```json
+{
+  "type": "group",
+  "title": "AUTH",
+  "items": [
+    {
+      "type": "text",
+      "id": "apiKey",
+      "title": "API key",
+      "default": "",
+      "secure": true
+    }
+  ]
+}
+```
+
+### Aidoku WASM settings (installed `.aidoku` packages)
+
+Aidoku sources use a richer settings schema in `settings.json`. Tamdok also renders these when you install Aidoku packages:
+
+| Aidoku type | Tamdok UI |
+|-------------|-----------|
+| `group` / `page` | Section cards with optional footer |
+| `switch` | Toggle (with optional subtitle) |
+| `text` | Text field (`secure` supported) |
+| `select`, `picker`, `segment` | Picker |
+| `multi-select` | Multi-select pills |
+| `editable-list` | Editable string list |
+| `link`, `login` | Opens URL in browser |
+
+For Tamdok JS sources, stick to the smaller set above (`switch`, `select`, `text`, `link`, `group`, `section`).
 
 ---
 

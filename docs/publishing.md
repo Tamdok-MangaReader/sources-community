@@ -106,11 +106,14 @@ After merge:
       "languages": ["en"],
       "contentRating": 0,
       "baseURL": "https://asurascans.com",
-      "minAppVersion": "0.1.0"
+      "minAppVersion": "0.1.0",
+      "maxAppVersion": "1.0.0"
     }
   ]
 }
 ```
+
+`baseURL` comes from `info.url` in `source.json`. Registry `name` and `iconURL` come from `static/registry.json` and `static/registry-icon.png` at build time.
 
 ## Pull request checklist
 

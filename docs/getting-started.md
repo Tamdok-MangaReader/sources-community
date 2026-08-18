@@ -44,10 +44,12 @@ The `template/` folder is not included in builds.
 | `id` | Unique identifier |
 | `name` | Display name in the app |
 | `version` | Integer; bump when you change parsing |
-| `url` | Site base URL |
+| `url` | Site base URL (used for Referer and registry `baseURL`) |
+| `urls` | Optional URL list when a source covers multiple domains; first entry is the base URL |
 | `languages` | Language codes (`en`, `ru`, ...) |
 | `contentRating` | `0` safe, `1` suggestive, `2` nsfw |
-| `minAppVersion` | Minimum Tamdok version |
+| `minAppVersion` | Minimum Tamdok version (registry metadata) |
+| `maxAppVersion` | Optional upper bound if the source needs an older app build |
 
 ## 3. Export module.exports
 
@@ -106,7 +108,21 @@ Response shape:
 }
 ```
 
-The app adds headers (User-Agent, Referer) automatically.
+The app adds browser-like headers automatically:
+
+- `User-Agent` (Safari on iPhone by default)
+- `Referer` / `Origin` from `info.url` or the request URL
+- `Accept` and `Accept-Language`
+
+Pass custom headers via the second argument:
+
+```javascript
+await ctx.request.get(url, {
+  headers: { Authorization: "Bearer " + token },
+});
+```
+
+Custom headers override defaults with the same name.
 
 ## 5. User settings
 
@@ -116,10 +132,30 @@ In `source.json`:
 {
   "settings": [
     {
-      "type": "switch",
-      "id": "showLocked",
-      "title": "Show locked chapters",
-      "default": true
+      "type": "group",
+      "title": "Reader",
+      "items": [
+        {
+          "type": "switch",
+          "id": "showLocked",
+          "title": "Show locked chapters",
+          "subtitle": "Include chapters that require login",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "apiToken",
+      "title": "API token",
+      "default": "",
+      "secure": true
+    },
+    {
+      "type": "link",
+      "id": "login",
+      "title": "Login on website",
+      "url": "https://example.com/login"
     }
   ]
 }
@@ -129,9 +165,12 @@ In code:
 
 ```javascript
 const showLocked = ctx.defaults.get("showLocked", true);
+const token = ctx.defaults.get("apiToken", "");
 ```
 
-Setting types: `switch`, `select`, `text`, `link`.
+Supported setting types for Tamdok JS: `group`, `section`, `switch`, `select`, `text`, `link`.
+
+See [filters-and-settings.md](filters-and-settings.md) for the full settings reference (including Aidoku WASM-only types).
 
 ## 6. Build and install
 
