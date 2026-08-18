@@ -1,0 +1,28 @@
+{
+  "info": {
+    "id": "en.asurascans.tamdok",
+    "name": "Asura Scans",
+    "version": 3,
+    "url": "https://asurascans.com",
+    "contentRating": 0,
+    "languages": ["en"],
+    "minAppVersion": "0.1.0"
+  },
+  "listings": [
+    { "id": "Ranking", "name": "Ranking", "kind": "list" }
+  ],
+  "settings": [
+    {
+      "type": "switch",
+      "id": "showLocked",
+      "title": "Show locked chapters",
+      "default": true
+    },
+    {
+      "type": "link",
+      "id": "login",
+      "title": "Login",
+      "url": "https://asurascans.com/login"
+    }
+  ]
+}

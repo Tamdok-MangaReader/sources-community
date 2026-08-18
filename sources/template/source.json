@@ -1,0 +1,11 @@
+{
+  "info": {
+    "id": "example.template",
+    "name": "Template Source",
+    "version": 1,
+    "url": "https://example.com",
+    "contentRating": 0,
+    "languages": ["en"],
+    "minAppVersion": "0.1.0"
+  }
+}
