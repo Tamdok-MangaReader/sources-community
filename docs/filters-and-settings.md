@@ -137,6 +137,8 @@ For genres with repeated query params (Asura), check `filter.matchAll !== false`
 
 Define in `source.json`:
 
+### Flat list
+
 ```json
 {
   "settings": [
@@ -145,7 +147,57 @@ Define in `source.json`:
       "id": "showLocked",
       "title": "Show locked chapters",
       "default": true
+    }
+  ]
+}
+```
+
+### Grouped settings (Aidoku-style)
+
+Use `group` to split settings into separate cards in the app (like Aidoku sections):
+
+```json
+{
+  "settings": [
+    {
+      "type": "group",
+      "title": "URL",
+      "items": [
+        {
+          "type": "text",
+          "id": "serverUrl",
+          "title": "Server URL",
+          "default": "http://localhost:25600"
+        }
+      ]
     },
+    {
+      "type": "group",
+      "title": "AUTH",
+      "items": [
+        {
+          "type": "text",
+          "id": "apiKey",
+          "title": "API key",
+          "default": ""
+        }
+      ]
+    }
+  ]
+}
+```
+
+You can also insert explicit section headers in a flat array:
+
+```json
+{ "type": "section", "id": "auth", "title": "AUTH" }
+```
+
+See `sources/server.komga/` in the main Tamdok sources repo for a full example.
+
+```json
+{
+  "settings": [
     {
       "type": "select",
       "id": "apiDomain",
@@ -189,6 +241,8 @@ if (!showLocked) {
 
 | type | App UI |
 |------|--------|
+| group | Section card with nested fields |
+| section | Section header in a flat settings list |
 | switch | Toggle |
 | select | Picker |
 | text | Text field |
