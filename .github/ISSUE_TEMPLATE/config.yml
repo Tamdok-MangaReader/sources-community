@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Author documentation
+    url: https://github.com/Tamdok-MangaReader/sources-community/tree/main/docs
+    about: How to write and publish Tamdok JS sources
+  - name: Tamdok app issues
+    url: https://github.com/Tamdok-MangaReader/Tamdok/issues
+    about: Bug in the Tamdok app (not your source code)

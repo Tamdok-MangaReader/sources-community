@@ -1,0 +1,72 @@
+name: Source bug
+description: A source in this community registry does not work correctly
+title: "[Source]: "
+labels: ["source", "bug"]
+body:
+  - type: input
+    id: source-id
+    attributes:
+      label: Source ID
+      placeholder: en.asurascans.tamdok
+    validations:
+      required: true
+
+  - type: dropdown
+    id: broken-part
+    attributes:
+      label: What is broken?
+      multiple: true
+      options:
+        - Home
+        - Search / filters
+        - Manga details
+        - Chapter list
+        - Reader / pages
+        - Settings
+        - Install / package build
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Manga/chapter URL and error details
+      placeholder: Link to the series or chapter, and what Tamdok shows.
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Tamdok app version
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - iOS
+        - Android
+        - Web
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I tested the live site in a browser (not only in Tamdok)
+          required: true
+        - label: I checked for an open issue for this source
+          required: true
