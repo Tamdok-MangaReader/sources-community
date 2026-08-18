@@ -11,7 +11,7 @@ Tamdok also supports Aidoku `.aix` (Rust/WASM) sources from the Aidoku registry.
 3. Run `npm install` and `node scripts/build.mjs`.
 4. Import the built `.tamdok` from `public/sources/` or publish to GitHub Pages.
 
-See [docs/index.md](docs/index.md) for full documentation.
+See [docs](https://github.com/Tamdok-MangaReader/sources-community/wiki) for full documentation.
 
 ## Repository layout
 
