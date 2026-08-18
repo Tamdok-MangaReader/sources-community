@@ -12,7 +12,19 @@ The script:
 1. Scans `sources/*` (except `template/`)
 2. Writes `public/sources/<id>-v<version>.tamdok`
 3. Copies icons to `public/icons/`
-4. Writes `public/index.min.json`
+4. Writes `public/index.min.json` with registry metadata from `static/registry.json`
+
+### Registry metadata
+
+Create `static/registry.json`:
+
+```json
+{
+  "name": "Tamdok Community"
+}
+```
+
+Optional registry icon: place `static/registry-icon.png` (or set `"icon": "my-icon.png"` in `registry.json`). The build copies it to `public/icons/registry.png` and sets `iconURL` in `index.min.json`.
 
 ### Package contents
 
@@ -82,7 +94,8 @@ After merge:
 
 ```json
 {
-  "name": "Tamdok Community Sources",
+  "name": "Tamdok Community",
+  "iconURL": "icons/registry.png",
   "sources": [
     {
       "id": "en.asurascans.tamdok",
