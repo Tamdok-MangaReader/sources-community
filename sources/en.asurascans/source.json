@@ -2,15 +2,13 @@
   "info": {
     "id": "en.asurascans.tamdok",
     "name": "Asura Scans",
-    "version": 5,
+    "version": 6,
     "url": "https://asurascans.com",
     "contentRating": 0,
     "languages": ["en"],
     "minAppVersion": "0.1.0"
   },
-  "listings": [
-    { "id": "Ranking", "name": "Ranking", "kind": "list" }
-  ],
+  "listings": [{ "id": "Ranking", "name": "Ranking", "kind": "list" }],
   "settings": [
     {
       "type": "switch",

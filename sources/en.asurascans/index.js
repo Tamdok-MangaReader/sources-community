@@ -3,7 +3,9 @@ const BASE_URL = "https://asurascans.com";
 const API_URL = "https://api.asurascans.com/api";
 function getMangaKey(url, keepSuffix = false) {
   const path = url.split("?")[0] ?? "";
-  const segment = path.split("/").slice(path.split("/").indexOf("comics") + 1)[0];
+  const segment = path
+    .split("/")
+    .slice(path.split("/").indexOf("comics") + 1)[0];
   if (!segment) return void 0;
   if (keepSuffix) return segment;
   const dash = segment.lastIndexOf("-");
@@ -52,7 +54,10 @@ function pageUrlFromItem(item) {
   if (isHttpUrl(unwrapped)) return unwrapped;
   if (typeof unwrapped === "string") return absUrl(BASE_URL, unwrapped);
   if (!unwrapped || typeof unwrapped !== "object") return undefined;
-  const url = astroUnwrap(unwrapped.url) ?? astroUnwrap(unwrapped.src) ?? astroUnwrap(unwrapped.image);
+  const url =
+    astroUnwrap(unwrapped.url) ??
+    astroUnwrap(unwrapped.src) ??
+    astroUnwrap(unwrapped.image);
   if (isHttpUrl(url)) return url;
   if (typeof url === "string") return absUrl(BASE_URL, url);
   return undefined;
@@ -64,17 +69,19 @@ function pageSizeFromItem(item) {
   const height = Number(astroUnwrap(unwrapped.height));
   return {
     ...(Number.isFinite(width) && width > 0 ? { width } : {}),
-    ...(Number.isFinite(height) && height > 0 ? { height } : {})
+    ...(Number.isFinite(height) && height > 0 ? { height } : {}),
   };
 }
 function pagesFromItems(items) {
   const list = astroUnwrap(items);
   if (!Array.isArray(list)) return [];
-  return list.map((item) => {
-    const url = pageUrlFromItem(item);
-    if (!url) return null;
-    return { url, ...pageSizeFromItem(item) };
-  }).filter(Boolean);
+  return list
+    .map((item) => {
+      const url = pageUrlFromItem(item);
+      if (!url) return null;
+      return { url, ...pageSizeFromItem(item) };
+    })
+    .filter(Boolean);
 }
 function seriesKeysForManga(manga) {
   const keys = [];
@@ -153,7 +160,7 @@ const GENRE_OPTIONS = [
   { id: "tower", label: "Tower" },
   { id: "tragedy", label: "Tragedy" },
   { id: "villain", label: "Villain" },
-  { id: "violence", label: "Violence" }
+  { id: "violence", label: "Violence" },
 ];
 const source = {
   async getListings() {
@@ -166,7 +173,7 @@ const source = {
         id: "sort",
         title: "Latest Update",
         options: ["Latest Update", "Popular", "Rating", "A-Z", "Newest"],
-        default: 0
+        default: 0,
       },
       {
         type: "multiSelect",
@@ -176,8 +183,8 @@ const source = {
           { id: "ongoing", label: "Ongoing" },
           { id: "completed", label: "Completed" },
           { id: "hiatus", label: "Hiatus" },
-          { id: "dropped", label: "Dropped" }
-        ]
+          { id: "dropped", label: "Dropped" },
+        ],
       },
       {
         type: "multiSelect",
@@ -186,15 +193,15 @@ const source = {
         options: [
           { id: "manhwa", label: "Manhwa" },
           { id: "manhua", label: "Manhua" },
-          { id: "manga", label: "Mangatoon" }
-        ]
+          { id: "manga", label: "Mangatoon" },
+        ],
       },
       {
         type: "multiSelect",
         id: "genres",
         title: "Genre",
-        options: GENRE_OPTIONS
-      }
+        options: GENRE_OPTIONS,
+      },
     ];
   },
   async getHome(ctx) {
@@ -202,118 +209,181 @@ const source = {
     const html = response.html();
     const components = [];
 
-    const trendingSection = html.querySelector('astro-island[opts*="TrendingSection"] > section');
+    const trendingSection = html.querySelector(
+      'astro-island[opts*="TrendingSection"] > section',
+    );
     if (trendingSection) {
-      const title = trendingSection.querySelector("h2")?.text.trim() ?? "Trending Today";
-      const entries = trendingSection.querySelectorAll("div.embla-trending > div > div > a").map((el) => {
-        const href = el.getAttribute("href");
-        const url = absUrl(response.url, href ?? undefined);
-        const key = url ? getMangaKey(url) : undefined;
-        if (!key) return null;
-        return {
-          key,
-          title: el.querySelector("span.block")?.text.trim() ?? key,
-          cover: absUrl(response.url, el.querySelector("img")?.getAttribute("src") ?? undefined)
-        };
-      }).filter(Boolean);
+      const title =
+        trendingSection.querySelector("h2")?.text.trim() ?? "Trending Today";
+      const entries = trendingSection
+        .querySelectorAll("div.embla-trending > div > div > a")
+        .map((el) => {
+          const href = el.getAttribute("href");
+          const url = absUrl(response.url, href ?? undefined);
+          const key = url ? getMangaKey(url) : undefined;
+          if (!key) return null;
+          return {
+            key,
+            title: el.querySelector("span.block")?.text.trim() ?? key,
+            cover: absUrl(
+              response.url,
+              el.querySelector("img")?.getAttribute("src") ?? undefined,
+            ),
+            rating: el.querySelector("span.ml-1")
+              ? el.querySelector("span.ml-1")?.text.trim()
+              : undefined,
+          };
+        })
+        .filter(Boolean);
       if (entries.length > 0) {
         components.push({
           title,
           kind: "scroller",
-          entries
+          entries,
         });
       }
     }
 
-    const latestSection = html.querySelector('astro-island[opts*="LatestUpdates"] > section');
+    const latestSection = html.querySelector(
+      'astro-island[opts*="LatestUpdates"] > section',
+    );
     if (latestSection) {
-      const title = latestSection.querySelector("h2")?.text.trim() ?? "Latest Updates";
-      const chapterEntries = latestSection.querySelectorAll("div.grid > div.grid").map((el) => {
-        const mangaLink = el.querySelector("a.font-bold");
-        const chapterLink = el.querySelector("div.flex > div > a.group.grid");
-        const mangaHref = mangaLink?.getAttribute("href");
-        const chapterHref = chapterLink?.getAttribute("href");
-        const mangaUrl = absUrl(response.url, mangaHref ?? undefined);
-        const chapterUrl = absUrl(response.url, chapterHref ?? undefined);
-        const mangaKey = mangaUrl ? getMangaKey(mangaUrl) : undefined;
-        const chapterKey = chapterUrl ? getChapterKey(chapterUrl) : undefined;
-        if (!mangaKey || !chapterKey) return null;
-        const chapterLabel = chapterLink?.querySelector("span.font-medium")?.text.trim() ?? "";
-        const chapterNumber = Number(chapterLabel.replace(/^Chapter\s*/i, "").trim());
-        return {
-          manga: {
-            key: mangaKey,
-            title: mangaLink?.text.trim() ?? mangaKey,
-            cover: absUrl(response.url, el.querySelector("img")?.getAttribute("src") ?? undefined)
-          },
-          chapter: {
-            key: chapterKey,
-            chapterNumber: Number.isFinite(chapterNumber) ? chapterNumber : undefined
-          }
-        };
-      }).filter(Boolean);
+      const title =
+        latestSection.querySelector("h2")?.text.trim() ?? "Latest Updates";
+      const chapterEntries = latestSection
+        .querySelectorAll("div.grid > div.grid")
+        .map((el) => {
+          const mangaLink = el.querySelector("a.font-bold");
+          const chapterLink = el.querySelector("div.flex > div > a.group.grid");
+          const mangaHref = mangaLink?.getAttribute("href");
+          const chapterHref = chapterLink?.getAttribute("href");
+          const mangaUrl = absUrl(response.url, mangaHref ?? undefined);
+          const chapterUrl = absUrl(response.url, chapterHref ?? undefined);
+          const mangaKey = mangaUrl ? getMangaKey(mangaUrl) : undefined;
+          const chapterKey = chapterUrl ? getChapterKey(chapterUrl) : undefined;
+          if (!mangaKey || !chapterKey) return null;
+          const chapterLabel =
+            chapterLink?.querySelector("span.font-medium")?.text.trim() ?? "";
+          const chapterNumber = Number(
+            chapterLabel.replace(/^Chapter\s*/i, "").trim(),
+          );
+          return {
+            manga: {
+              key: mangaKey,
+              title: mangaLink?.text.trim() ?? mangaKey,
+              cover: absUrl(
+                response.url,
+                el.querySelector("img")?.getAttribute("src") ?? undefined,
+              ),
+            },
+            chapter: {
+              key: chapterKey,
+              chapterNumber: Number.isFinite(chapterNumber)
+                ? chapterNumber
+                : undefined,
+            },
+          };
+        })
+        .filter(Boolean);
       if (chapterEntries.length > 0) {
         components.push({
           title,
           kind: "mangaChapterList",
           entries: [],
-          chapterEntries
+          chapterEntries,
         });
       }
     }
 
     if (components.length === 0) {
-      const popular = await source.getMangaList({ id: "Ranking", name: "Ranking", kind: "list" }, 1, ctx);
+      const popular = await source.getMangaList(
+        { id: "Ranking", name: "Ranking", kind: "list" },
+        1,
+        ctx,
+      );
       components.push({
         title: "Ranking",
         kind: "scroller",
         entries: popular.entries.slice(0, 12),
-        listing: { id: "Ranking", name: "Ranking" }
+        listing: { id: "Ranking", name: "Ranking" },
       });
     }
 
     return { components };
   },
   async getSearchMangaList({ query, page, filters }, ctx) {
-    const response = await ctx.request.get(buildBrowseUrl(page, query, filters));
+    const response = await ctx.request.get(
+      buildBrowseUrl(page, query, filters),
+    );
     const html = response.html();
     const cards = html.querySelectorAll("#series-grid > .series-card");
-    const entries = cards.map((card) => {
-      const link = card.querySelector("a");
-      const href = link?.getAttribute("href");
-      const key = href ? getMangaKey(absUrl(response.url, href) ?? href) : void 0;
-      if (!key) return null;
-      return {
-        key,
-        title: card.querySelector("h3")?.text.trim() ?? key,
-        cover: absUrl(response.url, card.querySelector("img")?.getAttribute("src") ?? void 0)
-      };
-    }).filter(Boolean);
-    const hasNextPage = Boolean(html.querySelector('button[aria-label="Next page"].cursor-pointer'));
+    const entries = cards
+      .map((card) => {
+        const link = card.querySelector("a");
+        const href = link?.getAttribute("href");
+        const key = href
+          ? getMangaKey(absUrl(response.url, href) ?? href)
+          : void 0;
+        if (!key) return null;
+        return {
+          key,
+          title: card.querySelector("h3")?.text.trim() ?? key,
+          cover: absUrl(
+            response.url,
+            card.querySelector("img")?.getAttribute("src") ?? void 0,
+          ),
+          status: card.querySelector("span.capitalize")
+            ? parseStatus(card.querySelector("span.capitalize")?.text.trim())
+            : undefined,
+          rating: card.querySelector("span.text-[10px]")
+            ? card.querySelector("span.text-[10px]")?.text.trim()
+            : undefined,
+        };
+      })
+      .filter(Boolean);
+    const hasNextPage = Boolean(
+      html.querySelector('button[aria-label="Next page"].cursor-pointer'),
+    );
     return { entries, hasNextPage };
   },
   async getMangaList(listing, page, ctx) {
     if (listing.id === "latest") {
-      return source.getSearchMangaList({ page, query: "", filters: [{ type: "sort", id: "sort", index: 0, ascending: false }] }, ctx);
+      return source.getSearchMangaList(
+        {
+          page,
+          query: "",
+          filters: [{ type: "sort", id: "sort", index: 0, ascending: false }],
+        },
+        ctx,
+      );
     }
     if (listing.id !== "Ranking") {
       return { entries: [], hasNextPage: false };
     }
     const response = await ctx.request.get(`${BASE_URL}/series-ranking`);
     const html = response.html();
-    const entries = html.querySelectorAll(".comics-ranking-list > a").map((el) => {
-      const href = el.getAttribute("href");
-      const url = absUrl(response.url, href ?? void 0);
-      const parts = url?.split("/") ?? [];
-      const comicsIndex = parts.indexOf("comics");
-      const key = comicsIndex >= 0 ? parts[comicsIndex + 1] : void 0;
-      if (!key) return null;
-      return {
-        key,
-        title: el.querySelector(".flex-1 > .text-sm")?.text.trim() ?? key,
-        cover: absUrl(response.url, el.querySelector("img")?.getAttribute("src") ?? void 0)
-      };
-    }).filter(Boolean);
+    const entries = html
+      .querySelectorAll(".comics-ranking-list > a")
+      .map((el) => {
+        const href = el.getAttribute("href");
+        const url = absUrl(response.url, href ?? void 0);
+        const parts = url?.split("/") ?? [];
+        const comicsIndex = parts.indexOf("comics");
+        const key = comicsIndex >= 0 ? parts[comicsIndex + 1] : void 0;
+        if (!key) return null;
+        return {
+          key,
+          title: el.querySelector(".flex-1 > .text-sm")?.text.trim() ?? key,
+          cover: absUrl(
+            response.url,
+            el.querySelector("img")?.getAttribute("src") ?? void 0,
+          ),
+          rating: el.querySelector(".tabular-nums")
+            ? el.querySelector(".tabular-nums")?.text.trim()
+            : undefined,
+        };
+      })
+      .filter(Boolean);
     return { entries, hasNextPage: false };
   },
   async getMangaUpdate(manga, needsDetails, needsChapters, ctx) {
@@ -322,77 +392,123 @@ const source = {
     const html = response.html();
     const updated = { ...manga, url };
     if (needsDetails) {
-      updated.title = html.querySelector("h1.text-xl.font-semibold")?.text.trim() ?? manga.title;
+      updated.title =
+        html.querySelector("h1.text-xl.font-semibold")?.text.trim() ??
+        manga.title;
       updated.cover = absUrl(
         response.url,
-        html.querySelector("div#desktop-cover-container img")?.getAttribute("src") ?? void 0
+        html
+          .querySelector("div#desktop-cover-container img")
+          ?.getAttribute("src") ?? void 0,
       );
-      updated.authors = html.querySelectorAll('a[href^="/browse?author"]').map((el) => el.text.trim()).filter((value) => value !== "_");
-      updated.artists = html.querySelectorAll('a[href^="/browse?artist"]').map((el) => el.text.trim()).filter((value) => value !== "_");
-      updated.description = html.querySelector("div#description-text")?.text.trim();
-      updated.tags = html.querySelectorAll('a[href^="/browse?genres="]').map((el) => el.text.trim());
-      const infoBlocks = html.querySelectorAll("div.flex.gap-3.pt-4.border-t > div");
+      updated.authors = html
+        .querySelectorAll('a[href^="/browse?author"]')
+        .map((el) => el.text.trim())
+        .filter((value) => value !== "_");
+      updated.artists = html
+        .querySelectorAll('a[href^="/browse?artist"]')
+        .map((el) => el.text.trim())
+        .filter((value) => value !== "_");
+      updated.description = html
+        .querySelector("div#description-text")
+        ?.text.trim();
+      updated.rating = html
+        .querySelector("span[data-series-rating]")
+        ?.text.trim();
+      updated.tags = html
+        .querySelectorAll('a[href^="/browse?genres="]')
+        .map((el) => el.text.trim());
+      const infoBlocks = html.querySelectorAll(
+        "div.flex.gap-3.pt-4.border-t > div",
+      );
       let statusText;
       let typeText;
       for (const block of infoBlocks) {
-        const label = block.querySelector("div.text-xs")?.text.trim().toLowerCase();
+        const label = block
+          .querySelector("div.text-xs")
+          ?.text.trim()
+          .toLowerCase();
         const value = block.querySelector("span.text-base")?.text.trim();
         if (label === "status") statusText = value;
         if (label === "type") typeText = value;
       }
       updated.status = parseStatus(statusText);
-      updated.contentRating = updated.tags?.some((tag) => tag === "Adult" || tag === "Ecchi") ? "suggestive" : "safe";
-      updated.viewer = ["manhwa", "manhua", "mangatoon"].includes(typeText?.toLowerCase() ?? "") ? "webtoon" : "webtoon";
+      updated.contentRating = updated.tags?.some(
+        (tag) => tag === "Adult" || tag === "Ecchi",
+      )
+        ? "suggestive"
+        : "safe";
+      updated.viewer = ["manhwa", "manhua", "mangatoon"].includes(
+        typeText?.toLowerCase() ?? "",
+      )
+        ? "webtoon"
+        : "webtoon";
     }
     if (needsChapters) {
-      const island = html.querySelector('astro-island[component-url*="ChapterListReact"], astro-island[opts*="ChapterListReact"]');
+      const island = html.querySelector(
+        'astro-island[component-url*="ChapterListReact"], astro-island[opts*="ChapterListReact"]',
+      );
       const propsRaw = island?.getAttribute("props");
       if (propsRaw) {
         try {
           const json = JSON.parse(propsRaw);
           const chaptersArr = astroUnwrap(json?.chapters);
           if (Array.isArray(chaptersArr)) {
-            updated.chapters = chaptersArr.map((entry) => {
-              const obj = astroUnwrap(entry);
-              if (!obj || typeof obj !== "object") return null;
-              const chapterNumber = Number(astroUnwrap(obj.number));
-              if (Number.isNaN(chapterNumber)) return null;
-              const key = String(chapterNumber);
-              let dateUploaded;
-              const published = astroUnwrap(obj.published_at);
-              if (typeof published === "string") {
-                const normalized = published.includes(".") ? `${published.split(".")[0]}Z` : published;
-                dateUploaded = Math.floor(new Date(normalized).getTime() / 1e3);
-              }
-              return {
-                key,
-                chapterNumber,
-                dateUploaded,
-                url: getChapterUrl(key, manga.key),
-                locked: Boolean(astroUnwrap(obj.is_locked) || astroUnwrap(obj.is_premium))
-              };
-            }).filter(Boolean);
+            updated.chapters = chaptersArr
+              .map((entry) => {
+                const obj = astroUnwrap(entry);
+                if (!obj || typeof obj !== "object") return null;
+                const chapterNumber = Number(astroUnwrap(obj.number));
+                if (Number.isNaN(chapterNumber)) return null;
+                const key = String(chapterNumber);
+                let dateUploaded;
+                const published = astroUnwrap(obj.published_at);
+                if (typeof published === "string") {
+                  const normalized = published.includes(".")
+                    ? `${published.split(".")[0]}Z`
+                    : published;
+                  dateUploaded = Math.floor(
+                    new Date(normalized).getTime() / 1e3,
+                  );
+                }
+                return {
+                  key,
+                  chapterNumber,
+                  dateUploaded,
+                  url: getChapterUrl(key, manga.key),
+                  locked: Boolean(
+                    astroUnwrap(obj.is_locked) || astroUnwrap(obj.is_premium),
+                  ),
+                };
+              })
+              .filter(Boolean);
           }
-        } catch {
-        }
+        } catch {}
       }
       if (!updated.chapters?.length) {
         const seen = new Set();
-        const chapters = html.querySelectorAll('a[href*="/chapter/"]').map((el) => {
-          const href = el.getAttribute("href");
-          const chapterUrl = absUrl(response.url, href ?? undefined);
-          const key = chapterUrl ? getChapterKey(chapterUrl) : undefined;
-          if (!key || seen.has(key)) return null;
-          seen.add(key);
-          const chapterNumber = Number(key);
-          return {
-            key,
-            chapterNumber: Number.isFinite(chapterNumber) ? chapterNumber : undefined,
-            url: getChapterUrl(key, manga.key)
-          };
-        }).filter(Boolean);
+        const chapters = html
+          .querySelectorAll('a[href*="/chapter/"]')
+          .map((el) => {
+            const href = el.getAttribute("href");
+            const chapterUrl = absUrl(response.url, href ?? undefined);
+            const key = chapterUrl ? getChapterKey(chapterUrl) : undefined;
+            if (!key || seen.has(key)) return null;
+            seen.add(key);
+            const chapterNumber = Number(key);
+            return {
+              key,
+              chapterNumber: Number.isFinite(chapterNumber)
+                ? chapterNumber
+                : undefined,
+              url: getChapterUrl(key, manga.key),
+            };
+          })
+          .filter(Boolean);
         if (chapters.length > 0) {
-          chapters.sort((a, b) => (b.chapterNumber ?? 0) - (a.chapterNumber ?? 0));
+          chapters.sort(
+            (a, b) => (b.chapterNumber ?? 0) - (a.chapterNumber ?? 0),
+          );
           updated.chapters = chapters;
         }
       }
@@ -409,8 +525,7 @@ const source = {
           const mapped = pagesFromItems(json2?.data?.chapter?.pages);
           if (mapped.length > 0) return mapped;
         }
-      } catch {
-      }
+      } catch {}
     }
     const htmlUrls = [];
     if (chapter.url) htmlUrls.push(chapter.url);
@@ -427,26 +542,32 @@ const source = {
           html = response.html();
           break;
         }
-      } catch {
-      }
+      } catch {}
     }
     if (!html || !response) return [];
-    const island = html.querySelector('astro-island[component-url*="ChapterReader"], astro-island[opts*="ChapterReader"]');
+    const island = html.querySelector(
+      'astro-island[component-url*="ChapterReader"], astro-island[opts*="ChapterReader"]',
+    );
     const propsRaw = island?.getAttribute("props");
     if (propsRaw) {
       try {
         const mapped = pagesFromItems(JSON.parse(propsRaw)?.pages);
         if (mapped.length > 0) return mapped;
-      } catch {
-      }
+      } catch {}
     }
-    return html.querySelectorAll("img").map((el) => {
-      const src = el.getAttribute("src") ?? el.getAttribute("data-src") ?? el.getAttribute("data-lazy-src");
-      if (!src || !src.includes("/asura-images/chapters/")) return null;
-      const url = absUrl(response.url, src);
-      return isHttpUrl(url) ? { url } : null;
-    }).filter(Boolean);
-  }
+    return html
+      .querySelectorAll("img")
+      .map((el) => {
+        const src =
+          el.getAttribute("src") ??
+          el.getAttribute("data-src") ??
+          el.getAttribute("data-lazy-src");
+        if (!src || !src.includes("/asura-images/chapters/")) return null;
+        const url = absUrl(response.url, src);
+        return isHttpUrl(url) ? { url } : null;
+      })
+      .filter(Boolean);
+  },
 };
 if (typeof module !== "undefined") {
   module.exports = { source };
