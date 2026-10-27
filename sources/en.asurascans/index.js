@@ -335,8 +335,8 @@ const source = {
           status: card.querySelector("span.capitalize")
             ? parseStatus(card.querySelector("span.capitalize")?.text.trim())
             : undefined,
-          rating: card.querySelector("span.text-[10px]")
-            ? card.querySelector("span.text-[10px]")?.text.trim()
+          rating: card.querySelector('span[class*="text-[10px]"]')
+            ? card.querySelector('span[class*="text-[10px]"]')?.text.trim()
             : undefined,
         };
       })
@@ -378,8 +378,8 @@ const source = {
             response.url,
             el.querySelector("img")?.getAttribute("src") ?? void 0,
           ),
-          rating: el.querySelector(".tabular-nums")
-            ? el.querySelector(".tabular-nums")?.text.trim()
+          rating: el.querySelector(".flex-1 span.tabular-nums")
+            ? el.querySelector(".flex-1 span.tabular-nums")?.text.trim()
             : undefined,
         };
       })
