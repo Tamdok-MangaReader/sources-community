@@ -1,14 +1,22 @@
-import { cpSync, existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { zipSync } from 'fflate';
+import {
+  cpSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+} from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { zipSync } from "fflate";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const sourcesDir = join(root, 'sources');
-const staticDir = join(root, 'static');
-const publicDir = join(root, 'public');
-const outSourcesDir = join(publicDir, 'sources');
-const outIconsDir = join(publicDir, 'icons');
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const sourcesDir = join(root, "sources");
+const staticDir = join(root, "static");
+const siteDir = join(root, "site");
+const publicDir = join(root, "public");
+const outSourcesDir = join(publicDir, "sources");
+const outIconsDir = join(publicDir, "icons");
 
 mkdirSync(outSourcesDir, { recursive: true });
 mkdirSync(outIconsDir, { recursive: true });
@@ -25,49 +33,67 @@ if (existsSync(staticDir)) {
   }
 }
 
-const registryConfigPath = join(staticDir, 'registry.json');
+if (existsSync(siteDir)) {
+  for (const entry of readdirSync(siteDir, { withFileTypes: true })) {
+    const from = join(siteDir, entry.name);
+    const to = join(publicDir, entry.name);
+    if (entry.isDirectory()) {
+      cpSync(from, to, { recursive: true });
+    } else {
+      cpSync(from, to);
+    }
+  }
+}
+
+const registryConfigPath = join(staticDir, "registry.json");
 const registryConfig = existsSync(registryConfigPath)
-  ? JSON.parse(readFileSync(registryConfigPath, 'utf8'))
+  ? JSON.parse(readFileSync(registryConfigPath, "utf8"))
   : {};
 
 const registry = {
-  name: registryConfig.name ?? 'Tamdok Community',
+  name: registryConfig.name ?? "Tamdok Community",
   sources: [],
 };
 
-const registryIconFile = registryConfig.icon ?? 'registry-icon.png';
+const registryIconFile = registryConfig.icon ?? "registry-icon.png";
 const registryIconPath = join(staticDir, registryIconFile);
 if (existsSync(registryIconPath)) {
   const iconBytes = readFileSync(registryIconPath);
-  writeFileSync(join(outIconsDir, 'registry.png'), iconBytes);
-  registry.iconURL = 'icons/registry.png';
+  writeFileSync(join(outIconsDir, "registry.png"), iconBytes);
+  registry.iconURL = "icons/registry.png";
 }
 
-for (const folder of readdirSync(sourcesDir, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
-  if (folder.name === 'template') continue;
+for (const folder of readdirSync(sourcesDir, { withFileTypes: true }).filter(
+  (entry) => entry.isDirectory(),
+)) {
+  if (folder.name === "template") continue;
 
   const sourcePath = join(sourcesDir, folder.name);
-  const manifest = JSON.parse(readFileSync(join(sourcePath, 'source.json'), 'utf8'));
-  const script = readFileSync(join(sourcePath, 'index.js'), 'utf8');
+  const manifest = JSON.parse(
+    readFileSync(join(sourcePath, "source.json"), "utf8"),
+  );
+  const script = readFileSync(join(sourcePath, "index.js"), "utf8");
   const files = {
-    'Payload/source.json': new TextEncoder().encode(JSON.stringify(manifest)),
-    'Payload/index.js': new TextEncoder().encode(script),
+    "Payload/source.json": new TextEncoder().encode(JSON.stringify(manifest)),
+    "Payload/index.js": new TextEncoder().encode(script),
   };
 
   if (Array.isArray(manifest.settings) && manifest.settings.length > 0) {
-    files['Payload/settings.json'] = new TextEncoder().encode(JSON.stringify(manifest.settings));
+    files["Payload/settings.json"] = new TextEncoder().encode(
+      JSON.stringify(manifest.settings),
+    );
   }
 
-  const filtersPath = join(sourcePath, 'filters.json');
+  const filtersPath = join(sourcePath, "filters.json");
   if (existsSync(filtersPath)) {
-    files['Payload/filters.json'] = readFileSync(filtersPath);
+    files["Payload/filters.json"] = readFileSync(filtersPath);
   }
 
-  const iconPath = join(sourcePath, 'icon.png');
+  const iconPath = join(sourcePath, "icon.png");
   let iconURL;
   if (existsSync(iconPath)) {
     const iconBytes = readFileSync(iconPath);
-    files['Payload/icon.png'] = iconBytes;
+    files["Payload/icon.png"] = iconBytes;
     const iconFileName = `${manifest.info.id}-v${manifest.info.version}.png`;
     writeFileSync(join(outIconsDir, iconFileName), iconBytes);
     iconURL = `icons/${iconFileName}`;
@@ -89,5 +115,5 @@ for (const folder of readdirSync(sourcesDir, { withFileTypes: true }).filter((en
   });
 }
 
-writeFileSync(join(publicDir, 'index.min.json'), JSON.stringify(registry));
+writeFileSync(join(publicDir, "index.min.json"), JSON.stringify(registry));
 console.log(`Built ${registry.sources.length} Tamdok sources`);

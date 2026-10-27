@@ -38,21 +38,27 @@ See the [wiki](https://github.com/Tamdok-MangaReader/sources-community/wiki)
 
 ZIP archive (Aidoku-compatible layout):
 
-| Path | Required |
-|------|----------|
-| `Payload/source.json` | Yes |
-| `Payload/index.js` | Yes |
-| `Payload/icon.png` | No |
-| `Payload/filters.json` | No |
+| Path                    | Required                                      |
+| ----------------------- | --------------------------------------------- |
+| `Payload/source.json`   | Yes                                           |
+| `Payload/index.js`      | Yes                                           |
+| `Payload/icon.png`      | No                                            |
+| `Payload/filters.json`  | No                                            |
 | `Payload/settings.json` | No (generated from `settings` in source.json) |
 
 ## Minimal source API
 
 ```javascript
 const source = {
-  async getSearchMangaList({ query, page, filters }, ctx) { /* ... */ },
-  async getMangaUpdate(manga, needsDetails, needsChapters, ctx) { /* ... */ },
-  async getPageList(manga, chapter, ctx) { /* ... */ },
+  async getSearchMangaList({ query, page, filters }, ctx) {
+    /* ... */
+  },
+  async getMangaUpdate(manga, needsDetails, needsChapters, ctx) {
+    /* ... */
+  },
+  async getPageList(manga, chapter, ctx) {
+    /* ... */
+  },
 };
 module.exports = { source };
 ```
@@ -76,11 +82,11 @@ pnpm run sync:sources
 
 ## Add sources in Tamdok
 
-<p align="center">
-  <a href="https://tamdok-mangareader.github.io/sources-community/open.html">
-    <img src="https://img.shields.io/badge/Open%20in%20Tamdok-Add%20registry-0A84FF?style=for-the-badge" alt="Open in Tamdok" />
-  </a>
-</p>
+### Website
+
+[https://tamdok-mangareader.github.io/sources-community](https://tamdok-mangareader.github.io/sources-community/)
+
+### Manual
 
 Tap the button on your iPhone to open Tamdok. The app opens **Settings → Sources** and asks you to confirm adding this registry.
 
@@ -98,6 +104,11 @@ Deep link (same action):
 tamdok://settings/sources?registry=https%3A%2F%2Ftamdok-mangareader.github.io%2Fsources-community%2Findex.min.json
 ```
 
+<p align="center">
+  <a href="https://tamdok-mangareader.github.io/sources-community/open.html">
+    <img src="https://img.shields.io/badge/Open%20in%20Tamdok-Add%20registry-0A84FF?style=for-the-badge" alt="Open in Tamdok" />
+  </a>
+</p>
 
 Or import a `.tamdok` file from Settings → Sources.
 
