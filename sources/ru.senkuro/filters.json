@@ -1,0 +1,16 @@
+[
+  {
+    "type": "multi-select",
+    "id": "status",
+    "title": "Статус тайтла",
+    "options": ["Онгоинг", "На паузе", "Завершен", "Отменён"],
+    "ids": ["ongoing", "hiatus", "completed", "cancelled"]
+  },
+  {
+    "type": "multi-select",
+    "id": "rating",
+    "title": "Возрастной рейтинг",
+    "options": ["0+", "16+", "18+"],
+    "ids": ["safe", "suggestive", "nsfw"]
+  }
+]
