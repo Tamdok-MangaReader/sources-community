@@ -70,11 +70,14 @@ document.addEventListener("DOMContentLoaded", () => {
       // check content rating
       let ratingMatch = true;
       if (filterState.rating === "safe") {
-        ratingMatch = !source.contentRating || source.contentRating === 0;
+        ratingMatch =
+          !source.contentRating ||
+          source.contentRating === 0 ||
+          source.contentRating === 1;
       } else if (filterState.rating === "contains-nsfw") {
-        ratingMatch = source.contentRating === 1;
-      } else if (filterState.rating === "nsfw") {
         ratingMatch = source.contentRating === 2;
+      } else if (filterState.rating === "nsfw") {
+        ratingMatch = source.contentRating === 3;
       }
 
       // check search query (match name, alt name, or url)
@@ -257,19 +260,19 @@ document.addEventListener("DOMContentLoaded", () => {
           titleRow.appendChild(version);
 
           let ratingBadge = null;
-          if (source.contentRating === 1 || source.contentRating === 2) {
+          if (source.contentRating === 2 || source.contentRating === 3) {
             ratingBadge = document.createElement("span");
             ratingBadge.className =
               "source-rating-badge " +
-              (source.contentRating === 1
-                ? "source-rating-17"
+              (source.contentRating === 2
+                ? "source-rating-16"
                 : "source-rating-18");
             ratingBadge.textContent =
-              source.contentRating === 1 ? "17+" : "18+";
+              source.contentRating === 2 ? "16+" : "18+";
             const tooltip = document.createElement("span");
             tooltip.className = "tooltip";
             tooltip.textContent =
-              source.contentRating === 1
+              source.contentRating === 2
                 ? "This source contains NSFW content"
                 : "This source contains primarily NSFW content";
             ratingBadge.appendChild(tooltip);
