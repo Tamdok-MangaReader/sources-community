@@ -71,10 +71,15 @@ async function senkuroGraphql(ctx, query, variables = {}) {
   try {
     if (typeof ctx?.request?.post !== "function")
       throw new TypeError("ctx.request.post отсутствует");
+
+    const cookie = ctx.cookies;
+    const cookieHeader = `access_token=${cookie.access_token}`;
+
     const response = await ctx.request.post(API_URL, {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
+        Cookie: cookieHeader,
         Origin: BASE_URL,
         Referer: `${BASE_URL}/`,
       },
@@ -239,7 +244,14 @@ function selectAttr(root, selector, attribute) {
 const source = {
   async getHome(ctx) {
     try {
-      const response = await ctx.request.get(BASE_URL);
+      const cookie = ctx.cookies;
+      const cookieHeader = `access_token=${cookie.access_token}`;
+      const response = await ctx.request.get(BASE_URL, {
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: cookieHeader,
+        },
+      });
       const html = response.html();
       const components = [];
       const sections = selectAll(html, ".main-section");
@@ -377,7 +389,7 @@ const source = {
         {
           page,
           query: "",
-          filters: [{ type: "sort", id: "sort", index: 0, ascending: false }],
+          filters: [],
         },
         ctx,
       );
@@ -388,7 +400,14 @@ const source = {
   async getMangaUpdate(manga, needsDetails, needsChapters, ctx) {
     try {
       const url = getMangaUrl(manga.key);
-      const response = await ctx.request.get(url);
+      const cookie = ctx.cookies;
+      const cookieHeader = `access_token=${cookie.access_token}`;
+      const response = await ctx.request.get(url, {
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: cookieHeader,
+        },
+      });
       const html = response.html();
       const updated = { ...manga, url };
       if (needsDetails) {

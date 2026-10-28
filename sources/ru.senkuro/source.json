@@ -15,5 +15,18 @@
       "kind": "list"
     }
   ],
-  "settings": []
+  "settings": [
+    {
+      "type": "group",
+      "title": "Авторизация",
+      "items": [
+        {
+          "type": "login",
+          "id": "login",
+          "title": "Авторизироваться",
+          "url": "https://senkuro.me/"
+        }
+      ]
+    }
+  ]
 }
