@@ -2,7 +2,7 @@
   "info": {
     "id": "en.asurascans.tamdok",
     "name": "Asura Scans",
-    "version": 7,
+    "version": 8,
     "url": "https://asurascans.com",
     "contentRating": 0,
     "languages": ["en"],
@@ -15,12 +15,6 @@
       "id": "showLocked",
       "title": "Show locked chapters",
       "default": true
-    },
-    {
-      "type": "link",
-      "id": "login",
-      "title": "Login",
-      "url": "https://asurascans.com/login"
     }
   ]
 }

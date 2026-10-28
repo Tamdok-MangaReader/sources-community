@@ -132,78 +132,7 @@ function buildBrowseUrl(page, query, filters) {
   }
   return url.toString();
 }
-const GENRE_OPTIONS = [
-  { id: "action", label: "Action" },
-  { id: "adventure", label: "Adventure" },
-  { id: "comedy", label: "Comedy" },
-  { id: "crazy-mc", label: "Crazy MC" },
-  { id: "demon", label: "Demon" },
-  { id: "dungeons", label: "Dungeons" },
-  { id: "fantasy", label: "Fantasy" },
-  { id: "game", label: "Game" },
-  { id: "genius-mc", label: "Genius MC" },
-  { id: "isekai", label: "Isekai" },
-  { id: "magic", label: "Magic" },
-  { id: "murim", label: "Murim" },
-  { id: "mystery", label: "Mystery" },
-  { id: "necromancer", label: "Necromancer" },
-  { id: "overpowered", label: "Overpowered" },
-  { id: "regression", label: "Regression" },
-  { id: "reincarnation", label: "Reincarnation" },
-  { id: "revenge", label: "Revenge" },
-  { id: "romance", label: "Romance" },
-  { id: "school-life", label: "School Life" },
-  { id: "sci-fi", label: "Sci-fi" },
-  { id: "shoujo", label: "Shoujo" },
-  { id: "shounen", label: "Shounen" },
-  { id: "system", label: "System" },
-  { id: "tower", label: "Tower" },
-  { id: "tragedy", label: "Tragedy" },
-  { id: "villain", label: "Villain" },
-  { id: "violence", label: "Violence" },
-];
 const source = {
-  async getListings() {
-    return [{ id: "Ranking", name: "Ranking", kind: "list" }];
-  },
-  async getFilters() {
-    return [
-      {
-        type: "sort",
-        id: "sort",
-        title: "Latest Update",
-        options: ["Latest Update", "Popular", "Rating", "A-Z", "Newest"],
-        default: 0,
-      },
-      {
-        type: "multiSelect",
-        id: "status",
-        title: "Status",
-        options: [
-          { id: "ongoing", label: "Ongoing" },
-          { id: "completed", label: "Completed" },
-          { id: "hiatus", label: "Hiatus" },
-          { id: "dropped", label: "Dropped" },
-        ],
-      },
-      {
-        type: "multiSelect",
-        id: "type",
-        title: "Type",
-        options: [
-          { id: "manhwa", label: "Manhwa" },
-          { id: "manhua", label: "Manhua" },
-          { id: "manga", label: "Mangatoon" },
-        ],
-      },
-      {
-        type: "multiSelect",
-        id: "genres",
-        title: "Genre",
-        options: GENRE_OPTIONS,
-      },
-    ];
-  },
   async getHome(ctx) {
     const response = await ctx.request.get(BASE_URL);
     const html = response.html();
@@ -229,9 +158,7 @@ const source = {
               response.url,
               el.querySelector("img")?.getAttribute("src") ?? undefined,
             ),
-            rating: el.querySelector("span.ml-1")
-              ? el.querySelector("span.ml-1")?.text.trim()
-              : undefined,
+            rating: el.querySelector("span.ml-1")?.text.trim() ?? undefined,
           };
         })
         .filter(Boolean);
@@ -335,9 +262,9 @@ const source = {
           status: card.querySelector("span.capitalize")
             ? parseStatus(card.querySelector("span.capitalize")?.text.trim())
             : undefined,
-          rating: card.querySelector('span[class*="text-[10px]"]')
-            ? card.querySelector('span[class*="text-[10px]"]')?.text.trim()
-            : undefined,
+          rating:
+            card.querySelector('span[class*="text-[10px]"]')?.text.trim() ??
+            undefined,
         };
       })
       .filter(Boolean);
@@ -378,9 +305,9 @@ const source = {
             response.url,
             el.querySelector("img")?.getAttribute("src") ?? void 0,
           ),
-          rating: el.querySelector(".flex-1 span.tabular-nums")
-            ? el.querySelector(".flex-1 span.tabular-nums")?.text.trim()
-            : undefined,
+          rating:
+            el.querySelector(".flex-1 span.tabular-nums")?.text.trim() ??
+            undefined,
         };
       })
       .filter(Boolean);
@@ -453,33 +380,40 @@ const source = {
         try {
           const json = JSON.parse(propsRaw);
           const chaptersArr = astroUnwrap(json?.chapters);
+          const showLocked = ctx.defaults.get("showLocked", true) !== false;
           if (Array.isArray(chaptersArr)) {
             updated.chapters = chaptersArr
               .map((entry) => {
                 const obj = astroUnwrap(entry);
                 if (!obj || typeof obj !== "object") return null;
-                const chapterNumber = Number(astroUnwrap(obj.number));
-                if (Number.isNaN(chapterNumber)) return null;
-                const key = String(chapterNumber);
-                let dateUploaded;
-                const published = astroUnwrap(obj.published_at);
-                if (typeof published === "string") {
-                  const normalized = published.includes(".")
-                    ? `${published.split(".")[0]}Z`
-                    : published;
-                  dateUploaded = Math.floor(
-                    new Date(normalized).getTime() / 1e3,
-                  );
+                if (
+                  (!astroUnwrap(obj.is_locked) &&
+                    !astroUnwrap(obj.is_premium)) ||
+                  showLocked
+                ) {
+                  const chapterNumber = Number(astroUnwrap(obj.number));
+                  if (Number.isNaN(chapterNumber)) return null;
+                  const key = String(chapterNumber);
+                  let dateUploaded;
+                  const published = astroUnwrap(obj.published_at);
+                  if (typeof published === "string") {
+                    const normalized = published.includes(".")
+                      ? `${published.split(".")[0]}Z`
+                      : published;
+                    dateUploaded = Math.floor(
+                      new Date(normalized).getTime() / 1e3,
+                    );
+                  }
+                  return {
+                    key,
+                    chapterNumber,
+                    dateUploaded,
+                    url: getChapterUrl(key, manga.key),
+                    locked: Boolean(
+                      astroUnwrap(obj.is_locked) || astroUnwrap(obj.is_premium),
+                    ),
+                  };
                 }
-                return {
-                  key,
-                  chapterNumber,
-                  dateUploaded,
-                  url: getChapterUrl(key, manga.key),
-                  locked: Boolean(
-                    astroUnwrap(obj.is_locked) || astroUnwrap(obj.is_premium),
-                  ),
-                };
               })
               .filter(Boolean);
           }

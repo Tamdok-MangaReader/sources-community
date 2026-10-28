@@ -6,6 +6,7 @@
     "build": "node scripts/build.mjs"
   },
   "dependencies": {
-    "fflate": "^0.8.3"
+    "fflate": "^0.8.3",
+    "node-html-parser": "^9.0.5"
   }
 }

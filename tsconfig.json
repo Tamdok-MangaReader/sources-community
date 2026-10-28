@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "es2018",
+    "checkJs": true,
+    "noImplicitAny": false,
+    "paths": {
+      "$lib": ["./src/lib"],
+      "$lib/*": ["./src/lib/*"],
+    },
+  },
+  "exclude": ["node_modules"],
+}
