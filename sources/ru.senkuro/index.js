@@ -418,7 +418,10 @@ const source = {
             selectAll(html, ".params__name-cnt").map(textOf).filter(Boolean),
           ),
         ];
-        updated.cover = absUrl(response.url, selectAttr(html, "img", "src"));
+        updated.cover = absUrl(
+          response.url,
+          selectAttr(html, ".cover-wrapper > img", "src"),
+        );
         updated.authors = [
           ...new Set(
             selectAll(html, ".card-body > .card-title")
