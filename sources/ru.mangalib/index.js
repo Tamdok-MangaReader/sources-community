@@ -80,6 +80,7 @@ function parseToken(raw) {
 function apiHeaders(cfg, extra = {}) {
   return {
     Accept: "application/json",
+    "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.7",
     Origin: cfg.base,
     Referer: cfg.api,
     "Site-Id": String(SITE_ID),
@@ -467,10 +468,15 @@ const source = {
 
   async getSearchMangaList({ query: text, page, filters }, ctx) {
     const cfg = settings(ctx);
-    const params = [];
-    if (text && text.trim()) params.push(["q", text.trim()]);
-    params.push(...activeFilters(filters));
-    return fetchList(ctx, cfg, "/manga", params, page ?? 1);
+    const raw = String(text ?? "").normalize("NFC").trim();
+    const filterParams = activeFilters(filters);
+    const run = (value) =>
+      fetchList(ctx, cfg, "/manga", [...(value ? [["q", value]] : []), ...filterParams], page ?? 1);
+    const result = await run(raw);
+    if (!result.entries.length && raw && raw !== raw.toLowerCase()) {
+      return run(raw.toLowerCase());
+    }
+    return result;
   },
 
   async getMangaUpdate(manga, needsDetails, needsChapters, ctx) {
