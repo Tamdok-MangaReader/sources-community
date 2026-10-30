@@ -13,7 +13,7 @@ const SITES = [
   { aidokuId: "ru.hentailib", id: "ru.hentailib", name: "HentaiLib", siteId: 4, url: "https://hentailib.me", rating: 2 },
 ];
 
-const VERSION = 4;
+const VERSION = 5;
 
 function convertSettings(aidokuSettings, site) {
   const base = aidokuSettings[0].items;
@@ -58,7 +58,11 @@ for (const site of SITES) {
     .replaceAll("__SITE_NAME__", site.name)
     .replaceAll("__BASE_URL__", site.url);
   fs.writeFileSync(path.join(out, "index.js"), code);
-  fs.copyFileSync(path.join(src, "res", "filters.json"), path.join(out, "filters.json"));
+  const filters = JSON.parse(fs.readFileSync(path.join(src, "res", "filters.json"), "utf8"));
+  for (const filter of filters) {
+    if (filter.type === "range") filter.default = {};
+  }
+  fs.writeFileSync(path.join(out, "filters.json"), JSON.stringify(filters, null, 2));
   fs.copyFileSync(path.join(src, "res", "icon.png"), path.join(out, "icon.png"));
   const aidokuSettings = JSON.parse(fs.readFileSync(path.join(src, "res", "settings.json"), "utf8"));
   const manifest = {

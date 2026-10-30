@@ -422,10 +422,25 @@ const LISTINGS = {
 const source = {
   async getHome(ctx) {
     const cfg = settings(ctx);
+    const section = async (run) => {
+      let last;
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+          const value = await run();
+          if (value.entries.length) return value;
+          last = new Error(`${SITE_NAME}: пустая секция`);
+        } catch (error) {
+          last = error;
+          if (error?.name === "AbortError") break;
+        }
+        await sleep(900 * attempt);
+      }
+      throw last;
+    };
     const [popular, reading, latest] = await Promise.allSettled([
-      LISTINGS.popular(ctx, cfg, 1),
-      LISTINGS.currently_reading(ctx, cfg, 1),
-      LISTINGS.latest(ctx, cfg, 1),
+      section(() => LISTINGS.popular(ctx, cfg, 1)),
+      section(() => LISTINGS.currently_reading(ctx, cfg, 1)),
+      section(() => LISTINGS.latest(ctx, cfg, 1)),
     ]);
     const components = [];
     if (popular.status === "fulfilled" && popular.value.entries.length) {
