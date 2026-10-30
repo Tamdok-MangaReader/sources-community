@@ -130,7 +130,7 @@ async function apiGet(ctx, cfg, path, params = []) {
       await sleep(400 * attempt);
     }
   }
-  console.error(tag("api"), path, lastError?.message ?? String(lastError));
+  console.log(tag("api"), path, lastError?.message ?? String(lastError));
   throw lastError;
 }
 

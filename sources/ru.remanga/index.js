@@ -87,7 +87,7 @@ async function apiGet(ctx, path, params = []) {
       await sleep(500 * attempt);
     }
   }
-  console.error(tag("api"), path, lastError?.message ?? String(lastError));
+  console.log(tag("api"), path, lastError?.message ?? String(lastError));
   throw lastError;
 }
 
@@ -348,7 +348,7 @@ const source = {
     results.forEach((result, index) => {
       if (result.status !== "fulfilled" || !result.value.entries.length) return;
       const id = ids[index];
-      components.push(scroller(LISTINGS[id].name, id, result.value.entries, index === 0 ? "bigScroller" : "scroller"));
+      components.push(scroller(LISTINGS[id].name, id, result.value.entries.slice(0, index === 0 ? 12 : 9), index === 0 ? "bigScroller" : "scroller"));
     });
     if (!components.length) {
       const reason = results.find((item) => item.status === "rejected")?.reason;
@@ -395,7 +395,7 @@ const source = {
         }
       } catch (error) {
         if (!needsChapters) throw error;
-        console.error(tag("details"), error?.message ?? String(error));
+        console.log(tag("details"), error?.message ?? String(error));
       }
     }
     if (needsChapters) updated.chapters = await fetchChapters(ctx, slug, branches);

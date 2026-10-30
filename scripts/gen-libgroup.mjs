@@ -13,7 +13,7 @@ const SITES = [
   { aidokuId: "ru.hentailib", id: "ru.hentailib", name: "HentaiLib", siteId: 4, url: "https://hentailib.me", rating: 2 },
 ];
 
-const VERSION = 2;
+const VERSION = 3;
 
 function convertSettings(aidokuSettings, site) {
   const base = aidokuSettings[0].items;

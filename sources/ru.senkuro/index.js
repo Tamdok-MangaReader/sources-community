@@ -188,7 +188,7 @@ async function graphql(ctx, query, variables = {}) {
       await sleep(400 * attempt);
     }
   }
-  console.error(tag("GraphQL"), lastError?.message ?? String(lastError));
+  console.log(tag("GraphQL"), lastError?.message ?? String(lastError));
   throw lastError;
 }
 
@@ -574,7 +574,7 @@ const source = {
 
     const htmlTask = needsDetails
       ? fetchDescriptionAndFormat(ctx, url).catch((error) => {
-          console.error(tag("details"), error?.message ?? String(error));
+          console.log(tag("details"), error?.message ?? String(error));
           return {};
         })
       : Promise.resolve({});

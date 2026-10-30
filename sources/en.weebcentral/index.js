@@ -42,7 +42,7 @@ async function getHtml(ctx, url) {
       await sleep(800 * attempt);
     }
   }
-  console.error(tag("html"), url, lastError?.message ?? String(lastError));
+  console.log(tag("html"), url, lastError?.message ?? String(lastError));
   throw lastError;
 }
 

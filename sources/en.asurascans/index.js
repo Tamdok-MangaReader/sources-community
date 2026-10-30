@@ -7,11 +7,11 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchResponse(ctx, url, { allowStatuses = [] } = {}) {
+async function fetchResponse(ctx, url, { allowStatuses = [], headers } = {}) {
   let lastError;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     try {
-      const response = await ctx.request.get(url);
+      const response = await ctx.request.get(url, headers ? { headers } : undefined);
       if (response.status === 429 || response.status >= 500) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -27,7 +27,7 @@ async function fetchResponse(ctx, url, { allowStatuses = [] } = {}) {
       await sleep(500 * attempt);
     }
   }
-  console.error("[Asura Scans]", url, lastError?.message ?? String(lastError));
+  console.log("[Asura Scans]", url, lastError?.message ?? String(lastError));
   throw lastError;
 }
 
@@ -175,8 +175,23 @@ function buildBrowseUrl(page, query, filters) {
 }
 const source = {
   async getHome(ctx) {
-    const response = await fetchResponse(ctx, BASE_URL);
-    const html = response.html();
+    let response;
+    let html;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      response = await fetchResponse(
+        ctx,
+        BASE_URL,
+        attempt > 1 ? { headers: { "Cache-Control": "no-cache" } } : {},
+      );
+      html = response.html();
+      if (
+        html.querySelector('astro-island[opts*="TrendingSection"]') ||
+        html.querySelector('astro-island[opts*="LatestUpdates"]')
+      ) {
+        break;
+      }
+      if (attempt < 3) await sleep(700 * attempt);
+    }
     const components = [];
 
     const trendingSection = html.querySelector(
@@ -458,7 +473,7 @@ const source = {
               .filter(Boolean);
           }
         } catch (error) {
-          console.error("[Asura Scans] chapter props", error?.message ?? String(error));
+          console.log("[Asura Scans] chapter props", error?.message ?? String(error));
         }
       }
       if (!updated.chapters?.length) {
@@ -502,7 +517,7 @@ const source = {
           if (mapped.length > 0) return mapped;
         }
       } catch (error) {
-        console.error("[Asura Scans] page api", error?.message ?? String(error));
+        console.log("[Asura Scans] page api", error?.message ?? String(error));
       }
     }
     const htmlUrls = [];
@@ -521,7 +536,7 @@ const source = {
           break;
         }
       } catch (error) {
-        console.error("[Asura Scans] page html", error?.message ?? String(error));
+        console.log("[Asura Scans] page html", error?.message ?? String(error));
       }
     }
     if (!html || !response) throw new Error("Asura Scans: chapter pages are unavailable");
@@ -534,7 +549,7 @@ const source = {
         const mapped = pagesFromItems(JSON.parse(propsRaw)?.pages);
         if (mapped.length > 0) return mapped;
       } catch (error) {
-        console.error("[Asura Scans] reader props", error?.message ?? String(error));
+        console.log("[Asura Scans] reader props", error?.message ?? String(error));
       }
     }
     const fallbackPages = html
