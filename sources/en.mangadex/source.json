@@ -1,0 +1,204 @@
+{
+  "info": {
+    "id": "en.mangadex.tamdok",
+    "name": "MangaDex",
+    "version": 2,
+    "url": "https://mangadex.org",
+    "contentRating": 1,
+    "languages": [
+      "en",
+      "sq",
+      "ar",
+      "az",
+      "bn",
+      "bg",
+      "my",
+      "ca",
+      "zh-Hans",
+      "zh-Hant",
+      "hr",
+      "cs",
+      "da",
+      "nl",
+      "eo",
+      "et",
+      "fil",
+      "fi",
+      "fr",
+      "ka",
+      "de",
+      "el",
+      "he",
+      "hi",
+      "hu",
+      "id",
+      "it",
+      "ja",
+      "kk",
+      "ko",
+      "la",
+      "lt",
+      "ms",
+      "mn",
+      "ne",
+      "no",
+      "fa",
+      "pl",
+      "pt",
+      "pt-BR",
+      "ro",
+      "ru",
+      "sr",
+      "sk",
+      "sl",
+      "es",
+      "es-419",
+      "sv",
+      "ta",
+      "te",
+      "th",
+      "tr",
+      "uk",
+      "vi"
+    ],
+    "minAppVersion": "0.1.3"
+  },
+  "listings": [
+    {
+      "id": "popular",
+      "name": "Popular",
+      "kind": "list"
+    },
+    {
+      "id": "latest",
+      "name": "Latest Updates",
+      "kind": "list"
+    },
+    {
+      "id": "recent",
+      "name": "Recently Added",
+      "kind": "list"
+    }
+  ],
+  "settings": [
+    {
+      "type": "group",
+      "title": "Settings",
+      "footer": "Languages: comma-separated MangaDex codes (en, ru, ja, pt-BR, zh-Hans, es-419...). Content rating defaults apply to Home, listings and searches without a rating filter.",
+      "items": [
+        {
+          "type": "text",
+          "id": "languages",
+          "title": "Languages",
+          "default": "en"
+        },
+        {
+          "type": "select",
+          "id": "titlePreference",
+          "title": "Title Preference",
+          "options": [
+            {
+              "id": "",
+              "label": "Primary"
+            },
+            {
+              "id": "select",
+              "label": "Selected Language(s)"
+            },
+            {
+              "id": "en",
+              "label": "English"
+            },
+            {
+              "id": "ro",
+              "label": "Romaji"
+            },
+            {
+              "id": "ja",
+              "label": "Japanese"
+            }
+          ],
+          "default": ""
+        },
+        {
+          "type": "select",
+          "id": "coverQuality",
+          "title": "Cover Quality",
+          "options": [
+            {
+              "id": "",
+              "label": "Original"
+            },
+            {
+              "id": ".512.jpg",
+              "label": "Medium"
+            },
+            {
+              "id": ".256.jpg",
+              "label": "Low"
+            }
+          ],
+          "default": ".512.jpg"
+        },
+        {
+          "type": "switch",
+          "id": "dataSaver",
+          "title": "Data Saver",
+          "subtitle": "Use smaller, more compressed images",
+          "default": false
+        },
+        {
+          "type": "switch",
+          "id": "standardHttpsPort",
+          "title": "Force Standard HTTPS Port",
+          "subtitle": "Prevent firewall restrictions on image servers",
+          "default": false
+        },
+        {
+          "type": "switch",
+          "id": "lockedChapters",
+          "title": "Show Unavailable Chapters",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "title": "Default Content Rating",
+      "footer": "Safe is always enabled.",
+      "items": [
+        {
+          "type": "switch",
+          "id": "ratingSuggestive",
+          "title": "Suggestive",
+          "default": true
+        },
+        {
+          "type": "switch",
+          "id": "ratingErotica",
+          "title": "Erotica",
+          "default": false
+        },
+        {
+          "type": "switch",
+          "id": "ratingPornographic",
+          "title": "Pornographic",
+          "default": false
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "title": "Blocked Groups",
+      "footer": "Comma-separated scanlator or uploader UUIDs. By default MangaPlus, Comikey, Bilibili Comics, Azuki and MangaHot are blocked.",
+      "items": [
+        {
+          "type": "text",
+          "id": "blockedGroups",
+          "title": "Blocked UUIDs",
+          "default": "5fed0576-8b94-4f9a-b6a7-08eecd69800d,06a9fecb-b608-4f19-b93c-7caab06b7f44,8d8ecf83-8d42-4f8c-add8-60963f9f28d9,4f1de6a2-f0c5-4ac5-bce5-02c7dbb67deb,319c1b10-cbd0-4f55-a46e-c4ee17e65139"
+        }
+      ]
+    }
+  ]
+}

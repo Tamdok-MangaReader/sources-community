@@ -1,0 +1,36 @@
+{
+  "info": {
+    "id": "ru.remanga.tamdok",
+    "name": "ReManga",
+    "version": 1,
+    "url": "https://remanga.org",
+    "contentRating": 1,
+    "languages": ["ru"],
+    "minAppVersion": "0.1.3"
+  },
+  "listings": [
+    { "id": "latest", "name": "Обновления", "kind": "list" },
+    { "id": "popular", "name": "Популярное", "kind": "list" },
+    { "id": "top-rated", "name": "Лучшие по рейтингу", "kind": "list" },
+    { "id": "new-titles", "name": "Новинки", "kind": "list" }
+  ],
+  "settings": [
+    {
+      "type": "group",
+      "title": "Аккаунт",
+      "footer": "Войдите на сайте — токен будет взят из cookie автоматически. Если не сработало, вставьте токен вручную ниже.",
+      "items": [
+        { "type": "login", "id": "login", "title": "Войти", "url": "https://remanga.org/" },
+        { "type": "text", "id": "accessToken", "title": "Токен (запасной вариант)", "default": "", "secure": true }
+      ]
+    },
+    {
+      "type": "group",
+      "title": "Главы",
+      "items": [
+        { "type": "switch", "id": "showPaidInfo", "title": "Цена и дата бесплатной публикации", "default": true },
+        { "type": "switch", "id": "englishTitles", "title": "Английские названия", "default": false }
+      ]
+    }
+  ]
+}

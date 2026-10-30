@@ -1,6 +1,43 @@
 "use strict";
 const BASE_URL = "https://asurascans.com";
 const API_URL = "https://api.asurascans.com/api";
+const MAX_ATTEMPTS = 3;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchResponse(ctx, url, { allowStatuses = [] } = {}) {
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await ctx.request.get(url);
+      if (response.status === 429 || response.status >= 500) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      if (response.status >= 400 && !allowStatuses.includes(response.status)) {
+        const error = new Error(`Asura Scans: HTTP ${response.status} for ${url}`);
+        error.fatal = true;
+        throw error;
+      }
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (error.fatal || attempt === MAX_ATTEMPTS) break;
+      await sleep(500 * attempt);
+    }
+  }
+  console.error("[Asura Scans]", url, lastError?.message ?? String(lastError));
+  throw lastError;
+}
+
+function nextButtonActive(html) {
+  const button = html.querySelector('button[aria-label="Next page"]');
+  if (!button) return false;
+  if (button.hasAttribute("disabled")) return false;
+  const className = button.getAttribute("class") ?? "";
+  return !/cursor-not-allowed|opacity-50|pointer-events-none/.test(className);
+}
 function getMangaKey(url, keepSuffix = false) {
   const path = url.split("?")[0] ?? "";
   const segment = path
@@ -10,6 +47,10 @@ function getMangaKey(url, keepSuffix = false) {
   if (keepSuffix) return segment;
   const dash = segment.lastIndexOf("-");
   if (dash === -1) return segment;
+  const suffix = segment.slice(dash + 1);
+  const looksLikeHash =
+    /^[0-9a-f]{6,}$/i.test(suffix) || (suffix.length >= 6 && /\d/.test(suffix) && /^[0-9a-z]+$/i.test(suffix));
+  if (!looksLikeHash) return segment;
   return segment.slice(0, dash);
 }
 function getChapterKey(url) {
@@ -134,7 +175,7 @@ function buildBrowseUrl(page, query, filters) {
 }
 const source = {
   async getHome(ctx) {
-    const response = await ctx.request.get(BASE_URL);
+    const response = await fetchResponse(ctx, BASE_URL);
     const html = response.html();
     const components = [];
 
@@ -222,26 +263,28 @@ const source = {
       }
     }
 
-    if (components.length === 0) {
-      const popular = await source.getMangaList(
-        { id: "Ranking", name: "Ranking", kind: "list" },
-        1,
-        ctx,
-      );
+    const ranking = await source
+      .getMangaList({ id: "Ranking", name: "Ranking", kind: "list" }, 1, ctx)
+      .catch((error) => {
+        if (components.length === 0) throw error;
+        return { entries: [] };
+      });
+    if (ranking.entries.length > 0) {
       components.push({
         title: "Ranking",
         kind: "scroller",
-        entries: popular.entries.slice(0, 12),
+        entries: ranking.entries.slice(0, 12),
         listing: { id: "Ranking", name: "Ranking" },
       });
     }
 
+    if (components.length === 0) {
+      throw new Error("Asura Scans: home page is empty");
+    }
     return { components };
   },
   async getSearchMangaList({ query, page, filters }, ctx) {
-    const response = await ctx.request.get(
-      buildBrowseUrl(page, query, filters),
-    );
+    const response = await fetchResponse(ctx, buildBrowseUrl(page, query, filters));
     const html = response.html();
     const cards = html.querySelectorAll("#series-grid > .series-card");
     const entries = cards
@@ -268,10 +311,7 @@ const source = {
         };
       })
       .filter(Boolean);
-    const hasNextPage = Boolean(
-      html.querySelector('button[aria-label="Next page"].cursor-pointer'),
-    );
-    return { entries, hasNextPage };
+    return { entries, hasNextPage: nextButtonActive(html) };
   },
   async getMangaList(listing, page, ctx) {
     if (listing.id === "latest") {
@@ -287,7 +327,7 @@ const source = {
     if (listing.id !== "Ranking") {
       return { entries: [], hasNextPage: false };
     }
-    const response = await ctx.request.get(`${BASE_URL}/series-ranking`);
+    const response = await fetchResponse(ctx, `${BASE_URL}/series-ranking`);
     const html = response.html();
     const entries = html
       .querySelectorAll(".comics-ranking-list > a")
@@ -315,19 +355,20 @@ const source = {
   },
   async getMangaUpdate(manga, needsDetails, needsChapters, ctx) {
     const url = getMangaUrl(manga.key);
-    const response = await ctx.request.get(url);
+    const response = await fetchResponse(ctx, url);
     const html = response.html();
     const updated = { ...manga, url };
     if (needsDetails) {
       updated.title =
         html.querySelector("h1.text-xl.font-semibold")?.text.trim() ??
         manga.title;
-      updated.cover = absUrl(
-        response.url,
-        html
-          .querySelector("div#desktop-cover-container img")
-          ?.getAttribute("src") ?? void 0,
-      );
+      updated.cover =
+        absUrl(
+          response.url,
+          html
+            .querySelector("div#desktop-cover-container img")
+            ?.getAttribute("src") ?? void 0,
+        ) ?? manga.cover;
       updated.authors = html
         .querySelectorAll('a[href^="/browse?author"]')
         .map((el) => el.text.trim())
@@ -360,16 +401,13 @@ const source = {
         if (label === "type") typeText = value;
       }
       updated.status = parseStatus(statusText);
-      updated.contentRating = updated.tags?.some(
-        (tag) => tag === "Adult" || tag === "Ecchi",
-      )
-        ? "suggestive"
-        : "safe";
-      updated.viewer = ["manhwa", "manhua", "mangatoon"].includes(
-        typeText?.toLowerCase() ?? "",
-      )
-        ? "webtoon"
-        : "webtoon";
+      const tagNames = updated.tags ?? [];
+      updated.contentRating = tagNames.some((tag) => /^(adult|mature|hentai)$/i.test(tag))
+        ? "nsfw"
+        : tagNames.some((tag) => /^ecchi$/i.test(tag))
+          ? "suggestive"
+          : "safe";
+      updated.viewer = "webtoon";
     }
     if (needsChapters) {
       const island = html.querySelector(
@@ -400,13 +438,15 @@ const source = {
                     const normalized = published.includes(".")
                       ? `${published.split(".")[0]}Z`
                       : published;
-                    dateUploaded = Math.floor(
-                      new Date(normalized).getTime() / 1e3,
-                    );
+                    const parsed = new Date(normalized).getTime();
+                    dateUploaded = Number.isFinite(parsed)
+                      ? Math.floor(parsed / 1e3)
+                      : undefined;
                   }
                   return {
                     key,
                     chapterNumber,
+                    language: "en",
                     dateUploaded,
                     url: getChapterUrl(key, manga.key),
                     locked: Boolean(
@@ -417,7 +457,9 @@ const source = {
               })
               .filter(Boolean);
           }
-        } catch {}
+        } catch (error) {
+          console.error("[Asura Scans] chapter props", error?.message ?? String(error));
+        }
       }
       if (!updated.chapters?.length) {
         const seen = new Set();
@@ -459,7 +501,9 @@ const source = {
           const mapped = pagesFromItems(json2?.data?.chapter?.pages);
           if (mapped.length > 0) return mapped;
         }
-      } catch {}
+      } catch (error) {
+        console.error("[Asura Scans] page api", error?.message ?? String(error));
+      }
     }
     const htmlUrls = [];
     if (chapter.url) htmlUrls.push(chapter.url);
@@ -476,9 +520,11 @@ const source = {
           html = response.html();
           break;
         }
-      } catch {}
+      } catch (error) {
+        console.error("[Asura Scans] page html", error?.message ?? String(error));
+      }
     }
-    if (!html || !response) return [];
+    if (!html || !response) throw new Error("Asura Scans: chapter pages are unavailable");
     const island = html.querySelector(
       'astro-island[component-url*="ChapterReader"], astro-island[opts*="ChapterReader"]',
     );
@@ -487,9 +533,11 @@ const source = {
       try {
         const mapped = pagesFromItems(JSON.parse(propsRaw)?.pages);
         if (mapped.length > 0) return mapped;
-      } catch {}
+      } catch (error) {
+        console.error("[Asura Scans] reader props", error?.message ?? String(error));
+      }
     }
-    return html
+    const fallbackPages = html
       .querySelectorAll("img")
       .map((el) => {
         const src =
@@ -501,6 +549,8 @@ const source = {
         return isHttpUrl(url) ? { url } : null;
       })
       .filter(Boolean);
+    if (fallbackPages.length === 0) throw new Error("Asura Scans: no pages found");
+    return fallbackPages;
   },
 };
 if (typeof module !== "undefined") {

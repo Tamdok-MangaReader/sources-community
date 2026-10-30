@@ -1,0 +1,111 @@
+{
+  "info": {
+    "id": "en.nhentai.tamdok",
+    "name": "nhentai",
+    "version": 1,
+    "url": "https://nhentai.net",
+    "contentRating": 2,
+    "languages": [
+      "en",
+      "ja",
+      "zh"
+    ],
+    "minAppVersion": "0.1.3"
+  },
+  "listings": [
+    {
+      "id": "popular-today",
+      "name": "Popular Today",
+      "kind": "list"
+    },
+    {
+      "id": "popular-week",
+      "name": "Popular Week",
+      "kind": "list"
+    },
+    {
+      "id": "popular",
+      "name": "Popular All",
+      "kind": "list"
+    },
+    {
+      "id": "latest",
+      "name": "Latest",
+      "kind": "list"
+    }
+  ],
+  "settings": [
+    {
+      "type": "group",
+      "title": "Preferences",
+      "items": [
+        {
+          "type": "select",
+          "id": "titlePreference",
+          "title": "Preferred Title Language",
+          "options": [
+            {
+              "id": "english",
+              "label": "English"
+            },
+            {
+              "id": "japanese",
+              "label": "Japanese"
+            }
+          ],
+          "default": "english"
+        },
+        {
+          "type": "select",
+          "id": "language",
+          "title": "Gallery Language",
+          "options": [
+            {
+              "id": "all",
+              "label": "All"
+            },
+            {
+              "id": "en",
+              "label": "English"
+            },
+            {
+              "id": "ja",
+              "label": "Japanese"
+            },
+            {
+              "id": "zh",
+              "label": "Chinese"
+            }
+          ],
+          "default": "all"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "title": "Blocklist",
+      "footer": "Comma-separated tags to hide from lists and search.",
+      "items": [
+        {
+          "type": "text",
+          "id": "blocklist",
+          "title": "Blocked tags",
+          "default": ""
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "title": "Cloudflare",
+      "footer": "If requests fail with 403, open the site, pass the check and return.",
+      "items": [
+        {
+          "type": "login",
+          "id": "login",
+          "title": "Open site",
+          "url": "https://nhentai.net/"
+        }
+      ]
+    }
+  ]
+}
