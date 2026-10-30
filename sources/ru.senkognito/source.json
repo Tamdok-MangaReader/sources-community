@@ -2,9 +2,9 @@
   "info": {
     "id": "ru.senkognito.tamdok",
     "name": "Senkognito",
-    "version": 2,
+    "version": 3,
     "url": "https://ne.senkognito.com",
-    "contentRating": 3,
+    "contentRating": 2,
     "languages": ["ru"],
     "minAppVersion": "0.1.3"
   },

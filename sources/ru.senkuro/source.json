@@ -2,9 +2,9 @@
   "info": {
     "id": "ru.senkuro.tamdok",
     "name": "Senkuro",
-    "version": 2,
+    "version": 3,
     "url": "https://senkuro.me",
-    "contentRating": 2,
+    "contentRating": 1,
     "languages": ["ru"],
     "minAppVersion": "0.1.3"
   },
