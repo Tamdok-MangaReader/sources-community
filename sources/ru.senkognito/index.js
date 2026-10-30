@@ -1,14 +1,28 @@
 "use strict";
 const BASE_URL = "https://ne.senkognito.com";
 const API_URL = "https://api.senkognito.com/graphql";
+const SITE_NAME = "Senkognito";
+const DEFAULT_RATING = "nsfw";
+
+const PAGE_SIZE = 20;
+const RAW_PAGES_WITH_FILTERS = 3;
+const MAX_ATTEMPTS = 2;
+
+const MANGA_CARD = `
+  slug
+  originalName{lang content}
+  titles{lang content}
+  status
+  rating
+  cover{original{url}}
+`;
 
 const SEARCH_QUERY = `
   query Search($query:String!,$type:SearchType!){
-    search(query:$query,type:$type,first:20){
+    search(query:$query,type:$type,first:${PAGE_SIZE}){
       edges{
         node{
           ... on SearchManga{
-            id
             slug
             originalName
             titles{lang content}
@@ -22,12 +36,52 @@ const SEARCH_QUERY = `
   }
 `;
 
-const MANGA_CHAPTERS_QUERY = `
-  query MangaChapters($branchId:ID!,$number:Float,$after:String,$orderBy:MangaChapterOrder!){
-    mangaChapters(first:100,branchId:$branchId,number:$number,after:$after,orderBy:$orderBy){
+const BROWSE_QUERY = `
+  query Browse($after:String){
+    mangas(first:${PAGE_SIZE},after:$after,orderBy:{field:__FIELD__,direction:DESC}){
+      edges{node{${MANGA_CARD}}}
+      pageInfo{hasNextPage endCursor}
+    }
+  }
+`;
+
+const POPULAR_QUERY = `
+  query Popular{
+    mangaPopularByPeriod(period:DAY){${MANGA_CARD}}
+  }
+`;
+
+const RECOMMENDATIONS_QUERY = `
+  query Recommendations{
+    mangaRecommendations{${MANGA_CARD}}
+  }
+`;
+
+const MANGA_QUERY = `
+  query Manga($slug:String!){
+    manga(slug:$slug){
+      slug
+      originalName{lang content}
+      titles{lang content}
+      status
+      rating
+      cover{original{url}}
+      mainStaff{person{name} roles}
+      labels{slug titles{lang content}}
+      branches{
+        id
+        primaryBranch
+        teamActivities{team{id name}}
+      }
+    }
+  }
+`;
+
+const CHAPTERS_QUERY = `
+  query MangaChapters($branchId:ID!,$after:String,$orderBy:MangaChapterOrder!){
+    mangaChapters(first:100,branchId:$branchId,after:$after,orderBy:$orderBy){
       edges{
         node{
-          id
           slug
           teamIds
           name
@@ -41,24 +95,10 @@ const MANGA_CHAPTERS_QUERY = `
   }
 `;
 
-const MANGA_BRANCHES_QUERY = `
-  query Manga($slug:String!){
-    manga(slug:$slug){
-      slug
-      branches{
-        id
-        primaryBranch
-        teamActivities{team{id name}}
-      }
-    }
-  }
-`;
-
 const READER_QUERY = `
   query Reader($slug:String!,$cdnQuality:String){
     mangaChapter(slug:$slug){
       pages(cdnQuality:$cdnQuality){
-        id
         number
         image{original{height width url}}
       }
@@ -66,134 +106,147 @@ const READER_QUERY = `
   }
 `;
 
-async function fetchMangas(ctx, query, variables = {}) {
-  const label = query.trim().split("\n")[0];
+const ORDERS = [
+  { id: "latest-updates", field: "LAST_CHAPTER_AT" },
+  { id: "new-titles", field: "CREATED_AT" },
+];
+
+const cursorCache = new Map();
+
+function tag(scope) {
+  return `[${SITE_NAME}][${scope}]`;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function cookieHeader(ctx) {
+  let cookies;
   try {
-    if (typeof ctx?.request?.post !== "function")
-      throw new TypeError("ctx.request.post отсутствует");
-
-    const cookie = ctx.cookies;
-    const cookieHeader = `access_token=${cookie.access_token}`;
-
-    const response = await ctx.request.post(API_URL, {
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Cookie: cookieHeader,
-        Origin: BASE_URL,
-        Referer: `${BASE_URL}/`,
-      },
-      body: JSON.stringify({ query, variables }),
-    });
-    if (!response) throw new TypeError("POST вернул пустой ответ");
-    if (response.status !== 200) {
-      const body =
-        typeof response.text === "function" ? await response.text() : "";
-      throw new Error(
-        `HTTP ${response.status}: ${String(body).slice(0, 1000)}`,
-      );
-    }
-    if (typeof response.json !== "function")
-      throw new TypeError("response.json не является функцией");
-    const result = await response.json();
-    if (!result || typeof result !== "object")
-      throw new TypeError("GraphQL вернул некорректный JSON");
-    if (result.errors?.length)
-      throw new Error(
-        result.errors.map((e) => e.message ?? JSON.stringify(e)).join("; "),
-      );
-    if (!result.data)
-      throw new Error(
-        `В ответе GraphQL отсутствует data: ${JSON.stringify(result).slice(0, 1000)}`,
-      );
-    return result.data;
-  } catch (error) {
-    console.error("[Senkognito][GraphQL][ERROR]", {
-      query: label,
-      variables,
-      message: error?.message ?? String(error),
-      stack: error?.stack,
-    });
-    throw error;
-  }
-}
-
-function isHttpUrl(value) {
-  return typeof value === "string" && /^https?:\/\//i.test(value);
-}
-
-function getOriginalImageUrl(page) {
-  const url = page?.image?.original?.url;
-  return isHttpUrl(url) ? url : undefined;
-}
-
-function parseChapterNumber(value) {
-  if (value == null || value === "") return undefined;
-  const number = Number(value);
-  return Number.isFinite(number) ? number : value;
-}
-
-function parseUploadedDate(value) {
-  if (!value) return undefined;
-  const date = Date.parse(value);
-  return Number.isFinite(date) ? date : undefined;
-}
-
-function getMangaKey(url) {
-  if (typeof url !== "string") return undefined;
-  try {
-    const parsed = new URL(url, BASE_URL);
-    const parts = parsed.pathname.split("/").filter(Boolean);
-    const index = parts.indexOf("manga");
-    if (index === -1) return undefined;
-    const segment = parts[index + 1];
-    if (!segment) return undefined;
-    return segment;
+    cookies = await ctx.cookies;
   } catch {
-    return undefined;
+    cookies = null;
   }
+  if (!cookies || typeof cookies !== "object") return "";
+  return Object.entries(cookies)
+    .filter(([, value]) => value != null && value !== "")
+    .map(([name, value]) => `${name}=${value}`)
+    .join("; ");
 }
 
-function getChapterKey(url) {
-  if (typeof url !== "string") return undefined;
-  const parts = url.split("?")[0].split("/");
-  const index = parts.indexOf("chapters");
-  if (index === -1) return undefined;
-  const segment = parts[index + 1];
-  if (!segment) return undefined;
-  const end = segment.search(/[^0-9.]/);
-  return end === -1 ? segment : segment.slice(0, end);
+async function requestHeaders(ctx, extra = {}) {
+  const cookie = await cookieHeader(ctx);
+  return {
+    Origin: BASE_URL,
+    Referer: `${BASE_URL}/`,
+    ...(cookie ? { Cookie: cookie } : {}),
+    ...extra,
+  };
 }
 
-function getMangaUrl(mangaId) {
-  return `${BASE_URL}/manga/${mangaId}`;
+async function hasSession(ctx) {
+  return (await cookieHeader(ctx)) !== "";
 }
 
-function absUrl(base, href) {
-  if (!href) return undefined;
-  try {
-    return new URL(href, base).toString();
-  } catch {
-    return href;
-  }
-}
-
-function getSection(sections, name, header) {
-  return Array.from(sections ?? []).find((section) => {
-    const caption = section.querySelector(`${header}.caption`);
-    return caption && caption.textContent.trim() === name;
+async function graphql(ctx, query, variables = {}) {
+  const headers = await requestHeaders(ctx, {
+    Accept: "application/json",
+    "Content-Type": "application/json",
   });
+  const body = JSON.stringify({ query, variables });
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await ctx.request.post(API_URL, { headers, body });
+      if (response.status === 429 || response.status >= 500) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      if (response.status >= 400) {
+        const text = await response.text();
+        const error = new Error(
+          `${SITE_NAME}: HTTP ${response.status} ${String(text).slice(0, 200)}`,
+        );
+        error.fatal = true;
+        throw error;
+      }
+      const result = await response.json();
+      if (result?.errors?.length) {
+        const error = new Error(
+          `${SITE_NAME}: ${result.errors.map((item) => item.message ?? JSON.stringify(item)).join("; ")}`,
+        );
+        error.fatal = true;
+        throw error;
+      }
+      if (!result?.data) {
+        throw new Error(`${SITE_NAME}: пустой ответ GraphQL`);
+      }
+      return result.data;
+    } catch (error) {
+      lastError = error;
+      if (error.fatal || attempt === MAX_ATTEMPTS) break;
+      await sleep(400 * attempt);
+    }
+  }
+  console.error(tag("GraphQL"), lastError?.message ?? String(lastError));
+  throw lastError;
 }
 
-function parseStatus(text) {
-  switch (text?.toLowerCase()) {
+function nameOf(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return value.content ?? "";
+}
+
+function pickTitle(node) {
+  const titles = node.titles ?? [];
+  const russian = titles.find((item) => item.lang?.toUpperCase() === "RU");
+  return (
+    russian?.content ||
+    nameOf(node.originalName) ||
+    titles[0]?.content ||
+    node.slug
+  );
+}
+
+function altTitlesOf(node, title) {
+  const values = [
+    nameOf(node.originalName),
+    ...(node.titles ?? []).map((item) => item.content),
+  ];
+  return [...new Set(values.filter((value) => value && value !== title))];
+}
+
+function mapRating(value) {
+  switch (String(value ?? "").toUpperCase()) {
+    case "GENERAL":
+    case "SAFE":
+    case "0+":
+    case "12+":
+      return "safe";
+    case "SENSITIVE":
+    case "QUESTIONABLE":
+    case "16+":
+      return "suggestive";
+    case "EXPLICIT":
+    case "18+":
+      return "nsfw";
+    default:
+      return DEFAULT_RATING;
+  }
+}
+
+function mapStatus(value) {
+  switch (String(value ?? "").toLowerCase()) {
     case "ongoing":
     case "онгоинг":
       return "ongoing";
+    case "suspended":
     case "hiatus":
     case "приостановлено":
       return "hiatus";
     case "finished":
+    case "released":
     case "completed":
     case "выпущено":
       return "completed";
@@ -205,387 +258,376 @@ function parseStatus(text) {
   }
 }
 
-function parseContentRating(text) {
-  switch (text?.toLowerCase()) {
-    case "safe":
-    case "0+":
-    case "12+":
-      return "safe";
-    case "sensitive":
-    case "questionable":
-    case "16+":
-      return "suggestive";
-    case "explicit":
-    case "18+":
-      return "nsfw";
-    default:
-      return "suggestive";
+function toEntry(node) {
+  if (!node?.slug) return null;
+  return {
+    key: node.slug,
+    title: pickTitle(node),
+    cover: node.cover?.original?.url,
+    url: `${BASE_URL}/manga/${node.slug}`,
+    status: mapStatus(node.status),
+    contentRating: mapRating(node.rating),
+  };
+}
+
+function toNumber(value) {
+  if (value == null || value === "") return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+}
+
+function toUnixSeconds(value) {
+  if (!value) return undefined;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? Math.floor(time / 1000) : undefined;
+}
+
+function staffNames(staff, roles) {
+  const names = (staff ?? [])
+    .filter((member) =>
+      (member.roles ?? []).some((role) =>
+        roles.some((needle) => String(role).toUpperCase().includes(needle)),
+      ),
+    )
+    .map((member) => member.person?.name)
+    .filter(Boolean);
+  return [...new Set(names)];
+}
+
+function activeFilters(filters) {
+  const result = { status: null, rating: null, order: ORDERS[0], popular: false };
+  for (const filter of filters ?? []) {
+    if (filter.type === "multiSelect") {
+      const included = filter.included ?? [];
+      const excluded = filter.excluded ?? [];
+      if (filter.id === "status" || filter.id === "rating") {
+        if (included.length || excluded.length) {
+          result[filter.id] = { included, excluded };
+        }
+      }
+    } else if (filter.type === "sort" && filter.id === "sort") {
+      if (filter.index === 2) result.popular = true;
+      else result.order = ORDERS[filter.index] ?? ORDERS[0];
+    }
   }
+  return result;
 }
 
-function textOf(element) {
-  return element?.text?.trim?.() ?? element?.textContent?.trim?.() ?? "";
-}
-
-function selectAll(root, selector) {
-  return Array.from(root?.querySelectorAll?.(selector) ?? []);
-}
-
-function selectText(root, selector) {
-  return textOf(root?.querySelector?.(selector));
-}
-
-function selectAttr(root, selector, attribute) {
+function matchesFilters(entry, selected) {
+  const test = (rule, value) => {
+    if (!rule) return true;
+    if (rule.included.length && !rule.included.includes(value)) return false;
+    return !rule.excluded.includes(value);
+  };
   return (
-    root?.querySelector?.(selector)?.getAttribute?.(attribute) ?? undefined
+    test(selected.status, entry.status) &&
+    test(selected.rating, entry.contentRating)
   );
+}
+
+function hasClientFilters(selected) {
+  return Boolean(selected.status || selected.rating);
+}
+
+async function fetchBrowse(ctx, order, rawIndex) {
+  const cacheKey = (index) => `${order.field}:${index}`;
+  let start = rawIndex;
+  while (start > 1 && !cursorCache.has(cacheKey(start))) start -= 1;
+  let after = start === 1 ? null : cursorCache.get(cacheKey(start));
+  let result = null;
+  for (let index = start; index <= rawIndex; index += 1) {
+    const data = await graphql(
+      ctx,
+      BROWSE_QUERY.replace("__FIELD__", order.field),
+      { after },
+    );
+    const connection = data.mangas;
+    if (!connection) throw new Error(`${SITE_NAME}: нет данных mangas`);
+    const pageInfo = connection.pageInfo ?? {};
+    const nextCursor = pageInfo.hasNextPage ? pageInfo.endCursor : null;
+    if (nextCursor) cursorCache.set(cacheKey(index + 1), nextCursor);
+    result = {
+      entries: (connection.edges ?? []).map((edge) => toEntry(edge?.node)).filter(Boolean),
+      hasNextPage: Boolean(nextCursor),
+    };
+    if (!nextCursor) {
+      if (index < rawIndex) return { entries: [], hasNextPage: false };
+      break;
+    }
+    after = nextCursor;
+  }
+  return result ?? { entries: [], hasNextPage: false };
+}
+
+async function browse(ctx, selected, page) {
+  if (selected.popular) {
+    const data = await graphql(ctx, POPULAR_QUERY);
+    const entries = (data.mangaPopularByPeriod ?? [])
+      .map(toEntry)
+      .filter(Boolean)
+      .filter((entry) => matchesFilters(entry, selected));
+    return { entries: page === 1 ? entries : [], hasNextPage: false };
+  }
+  const rawPerPage = hasClientFilters(selected) ? RAW_PAGES_WITH_FILTERS : 1;
+  const entries = [];
+  let hasNextPage = false;
+  for (let step = 0; step < rawPerPage; step += 1) {
+    const rawIndex = (page - 1) * rawPerPage + step + 1;
+    const result = await fetchBrowse(ctx, selected.order, rawIndex);
+    entries.push(...result.entries.filter((entry) => matchesFilters(entry, selected)));
+    hasNextPage = result.hasNextPage;
+    if (!hasNextPage) break;
+  }
+  return { entries, hasNextPage };
+}
+
+function scroller(title, id, entries) {
+  return {
+    kind: "scroller",
+    title,
+    entries,
+    ...(id ? { listing: { id, name: title } } : {}),
+  };
+}
+
+async function fetchDescriptionAndFormat(ctx, url) {
+  const response = await ctx.request.get(url, {
+    headers: await requestHeaders(ctx),
+  });
+  const html = response.html();
+  const description =
+    html.querySelector(".text-expander__collapse")?.text?.trim() ||
+    html.querySelector('meta[name="description"]')?.getAttribute("content")?.trim() ||
+    undefined;
+  const rating = html.querySelector(".rating-top > .rating-title")?.text?.trim() || undefined;
+  let viewer;
+  for (const block of html.querySelectorAll(".project-stats__body")) {
+    const label = block.querySelector("div.project-stats__text")?.text?.trim().toLowerCase();
+    const value = block.querySelector("div.project-stats__name")?.text?.trim().toLowerCase() ?? "";
+    if (label === "формат") viewer = value.includes("вебтун") ? "webtoon" : "default";
+  }
+  return { description, rating, viewer };
+}
+
+async function fetchChapters(ctx, remote) {
+  const branches = remote.branches ?? [];
+  const branch = branches.find((item) => item.primaryBranch) ?? branches[0];
+  if (!branch) return [];
+  const teams = new Map(
+    (branch.teamActivities ?? []).map((activity) => [activity.team?.id, activity.team?.name]),
+  );
+  const chapters = [];
+  const seen = new Set();
+  let after = null;
+  for (let guard = 0; guard < 500; guard += 1) {
+    const data = await graphql(ctx, CHAPTERS_QUERY, {
+      branchId: branch.id,
+      after,
+      orderBy: { field: "NUMBER", direction: "DESC" },
+    });
+    const connection = data.mangaChapters;
+    if (!connection) throw new Error(`${SITE_NAME}: нет данных mangaChapters`);
+    for (const edge of connection.edges ?? []) {
+      const chapter = edge?.node;
+      if (!chapter?.slug || seen.has(chapter.slug)) continue;
+      seen.add(chapter.slug);
+      const scanlators = (chapter.teamIds ?? [])
+        .map((id) => teams.get(id))
+        .filter(Boolean);
+      const volume = toNumber(chapter.volume);
+      const number = toNumber(chapter.number);
+      chapters.push({
+        key: chapter.slug,
+        title:
+          chapter.name ||
+          [
+            volume != null ? `Том ${volume}` : null,
+            number != null ? `Глава ${number}` : null,
+          ]
+            .filter(Boolean)
+            .join(" ") ||
+          undefined,
+        chapterNumber: number,
+        volumeNumber: volume,
+        dateUploaded: toUnixSeconds(chapter.createdAt),
+        language: "ru",
+        scanlators: scanlators.length ? scanlators : undefined,
+        url: `${BASE_URL}/manga/${remote.slug}/chapters`,
+      });
+    }
+    const pageInfo = connection.pageInfo ?? {};
+    if (!pageInfo.hasNextPage) break;
+    if (!pageInfo.endCursor || pageInfo.endCursor === after) {
+      throw new Error(`${SITE_NAME}: некорректный курсор пагинации глав`);
+    }
+    after = pageInfo.endCursor;
+  }
+  return chapters;
+}
+
+function parseHomeChapters(html, baseUrl) {
+  const section = Array.from(html.querySelectorAll(".main-section")).find(
+    (item) => item.querySelector("h3.caption")?.text?.trim() === "Последние обновления",
+  );
+  if (!section) return [];
+  const absolute = (href) => {
+    if (!href) return undefined;
+    try {
+      return new URL(href, baseUrl).toString();
+    } catch {
+      return undefined;
+    }
+  };
+  return Array.from(section.querySelectorAll(".card-new"))
+    .map((card) => {
+      const mangaHref = card.querySelector(".card-cover")?.getAttribute("href");
+      const chapterHref = card.querySelector(".card-new__status")?.getAttribute("href");
+      const mangaPath = mangaHref ? new URL(absolute(mangaHref) ?? baseUrl).pathname : "";
+      const chapterPath = chapterHref ? new URL(absolute(chapterHref) ?? baseUrl).pathname : "";
+      const mangaKey = mangaPath.split("/").filter(Boolean)[1];
+      const rawChapterKey = chapterPath.split("/").filter(Boolean)[3] ?? "";
+      const chapterKey = rawChapterKey.replace(/[^0-9.].*$/, "");
+      if (!mangaKey || !chapterKey) return null;
+      const label = (card.querySelector(".card-new__info")?.text ?? "")
+        .split("+")[0]
+        .replace(/^Глава\s*/i, "")
+        .trim();
+      return {
+        manga: {
+          key: mangaKey,
+          title: card.querySelector("h3.card-title")?.text?.trim() || mangaKey,
+          cover: absolute(card.querySelector("img")?.getAttribute("src")),
+        },
+        chapter: { key: chapterKey, chapterNumber: toNumber(label) },
+      };
+    })
+    .filter(Boolean);
 }
 
 const source = {
   async getHome(ctx) {
-    try {
-      const cookie = ctx.cookies;
-      const cookieHeader = `access_token=${cookie.access_token}`;
-      const response = await ctx.request.get(BASE_URL, {
-        headers: {
-          "Content-Type": "application/json",
-          Cookie: cookieHeader,
-        },
+    const [popular, latestChapters, fresh, recommended] = await Promise.allSettled([
+      graphql(ctx, POPULAR_QUERY).then((data) =>
+        (data.mangaPopularByPeriod ?? []).map(toEntry).filter(Boolean),
+      ),
+      requestHeaders(ctx)
+        .then((headers) => ctx.request.get(BASE_URL, { headers }))
+        .then((response) => parseHomeChapters(response.html(), response.url)),
+      fetchBrowse(ctx, ORDERS[1], 1).then((result) => result.entries),
+      graphql(ctx, RECOMMENDATIONS_QUERY).then((data) =>
+        (data.mangaRecommendations ?? []).map(toEntry).filter(Boolean),
+      ),
+    ]);
+    const components = [];
+    if (popular.status === "fulfilled" && popular.value.length) {
+      components.push(scroller("Популярное за день", null, popular.value));
+    }
+    if (latestChapters.status === "fulfilled" && latestChapters.value.length) {
+      components.push({
+        kind: "mangaChapterList",
+        title: "Последние обновления",
+        entries: [],
+        chapterEntries: latestChapters.value,
+        listing: { id: "latest-updates", name: "Свежие обновления" },
       });
-      const html = response.html();
-      const components = [];
-      const sections = selectAll(html, ".main-section");
-      const trendingSection = getSection(sections, "Самое читаемое", "h2");
-      if (trendingSection) {
-        const title =
-          selectText(trendingSection, "h2.caption") || "Самое читаемое";
-        const entries = selectAll(trendingSection, "article.card-main")
-          .map((el) => {
-            const href = selectAttr(el, "a", "href")?.replace("/chapters", "");
-            const url = absUrl(response.url, href);
-            const key = url ? getMangaKey(url) : undefined;
-            if (!key) return null;
-            return {
-              key,
-              title: selectText(el, "h3.card-title") || key,
-              cover: absUrl(response.url, selectAttr(el, "img", "src")),
-              rating: selectText(el, ".card-main__rating--high") || undefined,
-            };
-          })
-          .filter(Boolean);
-        if (entries.length)
-          components.push({ title, kind: "scroller", entries });
-      }
-      const latestSection = getSection(sections, "Последние обновления", "h3");
-      if (latestSection) {
-        const title =
-          selectText(latestSection, "h3.caption") || "Последние обновления";
-        const chapterEntries = selectAll(latestSection, ".card-new")
-          .map((el) => {
-            const mangaHref = selectAttr(el, ".card-cover", "href")?.replace(
-              "/chapters",
-              "",
-            );
-            const chapterHref = selectAttr(el, ".card-new__status", "href");
-            const mangaUrl = absUrl(response.url, mangaHref);
-            const chapterUrl = absUrl(response.url, chapterHref);
-            const mangaKey = mangaUrl ? getMangaKey(mangaUrl) : undefined;
-            const chapterKey = chapterUrl
-              ? getChapterKey(chapterUrl)
-              : undefined;
-            if (!mangaKey || !chapterKey) return null;
-            const chapterLabel = (
-              selectText(el, ".card-new__info").split("+")[0] ?? ""
-            )
-              .replace(/^Глава\s*/i, "")
-              .trim();
-            const chapterNumber = Number(chapterLabel);
-            return {
-              manga: {
-                key: mangaKey,
-                title: selectText(el, "h3.card-title") || mangaKey,
-                cover: absUrl(response.url, selectAttr(el, "img", "src")),
-              },
-              chapter: {
-                key: chapterKey,
-                chapterNumber: Number.isFinite(chapterNumber)
-                  ? chapterNumber
-                  : undefined,
-              },
-            };
-          })
-          .filter(Boolean);
-        if (chapterEntries.length)
-          components.push({
-            title,
-            kind: "mangaChapterList",
-            entries: [],
-            chapterEntries,
-          });
-      }
-      if (!components.length) {
-        const popular = await source.getMangaList(
-          { id: "latest-updates", name: "Свежие обновления", kind: "list" },
-          1,
-          ctx,
-        );
-        components.push({
-          title: "Ranking",
-          kind: "scroller",
-          entries: (popular.entries ?? []).slice(0, 12),
-          listing: { id: "Ranking", name: "Ranking" },
-        });
-      }
-      return { components };
-    } catch (error) {
-      console.error("[Senkognito][getHome]", error?.stack ?? error);
-      throw error;
     }
+    if (fresh.status === "fulfilled" && fresh.value.length) {
+      components.push(scroller("Новые тайтлы", "new-titles", fresh.value));
+    }
+    if (recommended.status === "fulfilled" && recommended.value.length) {
+      components.push(scroller("Рекомендации", null, recommended.value));
+    }
+    if (!components.length) {
+      const reason = [popular, latestChapters, fresh, recommended].find(
+        (item) => item.status === "rejected",
+      )?.reason;
+      throw reason ?? new Error(`${SITE_NAME}: главная пуста`);
+    }
+    return { components };
   },
+
   async getSearchMangaList({ query = "", page = 1, filters = [] } = {}, ctx) {
-    const data = await fetchMangas(ctx, SEARCH_QUERY, {
-      query: query.trim(),
-      type: "MANGA",
-    });
-    const edges = data.search?.edges ?? [];
-    const entries = edges
-      .map(({ node }) => {
-        if (!node?.slug) return null;
-        return {
-          key: node.slug,
-          title:
-            node.titles?.find((title) => title.lang?.toUpperCase() === "RU")
-              ?.content ??
-            node.originalName?.content ??
-            node.slug,
-          cover: node.cover?.original?.url,
-          status: parseStatus(node.status),
-          contentRating: parseContentRating(node.rating),
-        };
-      })
-      .filter(Boolean);
-    const activeFilters = (filters ?? []).filter(
-      (filter) => filter.type === "multiSelect" && filter.included?.length > 0,
-    );
-    const filteredEntries = entries.filter((entry) =>
-      activeFilters.every((filter) => {
-        if (filter.id === "rating") {
-          return filter.included.includes(entry.contentRating);
-        }
-        if (filter.id === "status") {
-          return filter.included.includes(entry.status);
-        }
-        return true;
-      }),
-    );
-    return {
-      entries: filteredEntries,
-      hasNextPage: false,
-    };
+    const selected = activeFilters(filters);
+    const text = String(query ?? "").trim();
+    if (!text) return browse(ctx, selected, page);
+    if (page > 1) return { entries: [], hasNextPage: false };
+    const data = await graphql(ctx, SEARCH_QUERY, { query: text, type: "MANGA" });
+    const entries = (data.search?.edges ?? [])
+      .map((edge) => toEntry(edge?.node))
+      .filter(Boolean)
+      .filter((entry) => matchesFilters(entry, selected));
+    return { entries, hasNextPage: false };
   },
+
   async getMangaList(listing, page, ctx) {
-    if (listing.id === "latest-updates") {
-      return source.getSearchMangaList(
-        {
-          page,
-          query: "",
-          filters: [],
-        },
-        ctx,
-      );
-    }
-    return { entries: [], hasNextPage: false };
+    const order = ORDERS.find((item) => item.id === listing?.id);
+    if (!order) return { entries: [], hasNextPage: false };
+    return browse(ctx, { status: null, rating: null, order, popular: false }, page);
   },
 
   async getMangaUpdate(manga, needsDetails, needsChapters, ctx) {
-    try {
-      const url = getMangaUrl(manga.key);
-      const cookie = ctx.cookies;
-      const cookieHeader = `access_token=${cookie.access_token}`;
-      const response = await ctx.request.get(url, {
-        headers: {
-          "Content-Type": "application/json",
-          Cookie: cookieHeader,
-        },
-      });
-      const html = response.html();
-      const updated = { ...manga, url };
-      if (needsDetails) {
-        updated.title =
-          selectText(html, "h1.caption.caption-size-lg") || manga.title;
-        updated.altTitles = [
-          ...new Set(
-            selectAll(html, ".params__name-cnt").map(textOf).filter(Boolean),
-          ),
-        ];
-        updated.cover = absUrl(
-          response.url,
-          selectAttr(html, ".cover-wrapper > img", "src"),
-        );
-        updated.authors = [
-          ...new Set(
-            selectAll(html, ".card-body > .card-title")
-              .map((el) => textOf(el).replace(/\.$/, ""))
-              .filter((value) => value && value !== "_"),
-          ),
-        ];
-        updated.artists = selectAll(html, ".project-slider__container > .thing")
-          .map((el) => {
-            return el.querySelector(".card-text")
-              ? selectText(el, ".card-name").replace(/\.$/, "")
-              : "";
-          })
-          .filter(Boolean);
-        updated.description =
-          selectText(html, ".text-expander > .text-expander__collapse") ||
-          undefined;
-        updated.rating =
-          selectText(html, ".rating-top > .rating-title") || undefined;
-        updated.tags = [
-          ...new Set(
-            selectAll(html, ".project-tags a.button--secondary")
-              .map((el) => selectText(el, "span"))
-              .filter(Boolean),
-          ),
-        ];
-        let statusText;
-        let typeText;
-        for (const block of selectAll(html, ".project-stats__body")) {
-          const label = selectText(
-            block,
-            "div.project-stats__text",
-          ).toLowerCase();
-          const value = selectText(
-            block,
-            "div.project-stats__name",
-          ).toLowerCase();
-          if (label === "статус тайтла") statusText = value;
-          if (label === "формат")
-            typeText = value.includes("вебтун") ? "webtoon" : "default";
-        }
-        updated.status = parseStatus(statusText);
-        updated.contentRating = parseContentRating(
-          selectText(
-            html,
-            '.project-tags > .button--accent[href="/browse/manga/ratings/sensitive"]',
-          ) || "16+",
-        );
-        updated.viewer = typeText || "default";
-      }
-      if (needsChapters) {
-        const data = await fetchMangas(ctx, MANGA_BRANCHES_QUERY, {
-          slug: manga.key,
-        });
-        const remote = data?.manga;
-        if (!remote)
-          throw new Error(
-            `Senkognito: манга отсутствует в GraphQL-ответе для slug=${manga.key}`,
-          );
-        const branches = remote.branches ?? [];
-        const branch =
-          branches.find((item) => item.primaryBranch) ?? branches[0];
-        if (!branch) {
-          updated.chapters = [];
-          return updated;
-        }
-        const chapters = [];
-        const seen = new Set();
-        let after = null;
-        while (true) {
-          const pageData = await fetchMangas(ctx, MANGA_CHAPTERS_QUERY, {
-            branchId: branch.id,
-            number: null,
-            after,
-            orderBy: { field: "NUMBER", direction: "DESC" },
-          });
-          const connection = pageData?.mangaChapters;
-          if (!connection)
-            throw new Error("Senkognito: отсутствует mangaChapters");
-          for (const edge of connection.edges ?? []) {
-            const chapter = edge?.node;
-            if (!chapter?.slug || seen.has(chapter.slug)) continue;
-            seen.add(chapter.slug);
-            const teamIds = chapter.teamIds ?? [];
-            const scanlators = (branch.teamActivities ?? [])
-              .filter((activity) => teamIds.includes(activity.team?.id))
-              .map((activity) => activity.team?.name)
-              .filter(Boolean);
-            const volume = chapter.volume;
-            const number = chapter.number;
-            chapters.push({
-              key: chapter.slug,
-              title:
-                chapter.name ||
-                (volume != null || number != null
-                  ? [
-                      volume != null ? `Том ${volume}` : null,
-                      number != null ? `Глава ${number}` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" ")
-                  : undefined),
-              chapterNumber: parseChapterNumber(number),
-              volumeNumber: parseChapterNumber(volume),
-              dateUploaded: parseUploadedDate(chapter.createdAt),
-              language: "ru",
-              scanlators: scanlators.length ? scanlators : undefined,
-              url: `${BASE_URL}/manga/${remote.slug}/chapters`,
-            });
-          }
-          const pageInfo = connection.pageInfo ?? {};
-          if (!pageInfo.hasNextPage) break;
-          const next = pageInfo.endCursor;
-          if (!next || next === after)
-            throw new Error("Senkognito: некорректный курсор пагинации глав");
-          after = next;
-        }
-        updated.chapters = chapters;
-      }
-      return updated;
-    } catch (error) {
-      console.error("[Senkognito][getMangaUpdate]", {
-        mangaKey: manga?.key,
-        needsDetails,
-        needsChapters,
-        message: error?.message ?? String(error),
-        stack: error?.stack,
-      });
-      throw error;
+    const url = `${BASE_URL}/manga/${manga.key}`;
+    const data = await graphql(ctx, MANGA_QUERY, { slug: manga.key });
+    const remote = data?.manga;
+    if (!remote) throw new Error(`${SITE_NAME}: тайтл ${manga.key} не найден`);
+    const updated = { ...manga, url };
+
+    const htmlTask = needsDetails
+      ? fetchDescriptionAndFormat(ctx, url).catch((error) => {
+          console.error(tag("details"), error?.message ?? String(error));
+          return {};
+        })
+      : Promise.resolve({});
+    const chaptersTask = needsChapters ? fetchChapters(ctx, remote) : Promise.resolve(null);
+    const [extra, chapters] = await Promise.all([htmlTask, chaptersTask]);
+
+    if (needsDetails) {
+      const title = pickTitle(remote);
+      updated.title = title;
+      updated.altTitles = altTitlesOf(remote, title);
+      updated.cover = remote.cover?.original?.url ?? manga.cover;
+      updated.authors = staffNames(remote.mainStaff, ["AUTHOR", "WRITER", "STORY", "SCRIPT"]);
+      updated.artists = staffNames(remote.mainStaff, ["ART", "ILLUSTRATOR", "DRAWER"]);
+      updated.tags = [
+        ...new Set(
+          (remote.labels ?? [])
+            .map((label) => pickTitle({ slug: label.slug, titles: label.titles }))
+            .filter(Boolean),
+        ),
+      ];
+      updated.status = mapStatus(remote.status);
+      updated.contentRating = mapRating(remote.rating);
+      updated.description = extra.description;
+      updated.rating = extra.rating;
+      updated.viewer = extra.viewer ?? "default";
     }
+    if (needsChapters) updated.chapters = chapters ?? [];
+    return updated;
   },
 
   async getPageList(manga, chapter, ctx) {
-    try {
-      const data = await fetchMangas(ctx, READER_QUERY, {
-        slug: chapter.key,
-        cdnQuality: "red",
-      });
-      const pages = data.mangaChapter?.pages ?? [];
-      return pages
-        .map((page) => {
-          const url = getOriginalImageUrl(page);
-          if (!url) return null;
-          const original = page.image?.original;
-          return {
-            url,
-            ...(Number(original?.width) > 0
-              ? { width: Number(original.width) }
-              : {}),
-            ...(Number(original?.height) > 0
-              ? { height: Number(original.height) }
-              : {}),
-          };
-        })
-        .filter(Boolean);
-    } catch (error) {
-      console.error("[Senkognito][getPageList]", {
-        mangaKey: manga?.key,
-        chapterKey: chapter?.key,
-        message: error?.message ?? String(error),
-        stack: error?.stack,
-      });
-      throw error;
+    const data = await graphql(ctx, READER_QUERY, {
+      slug: chapter.key,
+      cdnQuality: "red",
+    });
+    const pages = (data.mangaChapter?.pages ?? [])
+      .slice()
+      .sort((left, right) => (toNumber(left.number) ?? 0) - (toNumber(right.number) ?? 0))
+      .map((page) => {
+        const original = page.image?.original;
+        if (!original?.url || !/^https?:\/\//i.test(original.url)) return null;
+        const width = Number(original.width);
+        const height = Number(original.height);
+        return {
+          url: original.url,
+          ...(width > 0 && height > 0 ? { width, height } : {}),
+        };
+      })
+      .filter(Boolean);
+    if (!pages.length && !(await hasSession(ctx))) {
+      throw new Error(`${SITE_NAME}: для чтения требуется авторизация (Настройки источника → Авторизироваться)`);
     }
+    return pages;
   },
 };
 

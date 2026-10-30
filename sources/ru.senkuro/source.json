@@ -2,16 +2,23 @@
   "info": {
     "id": "ru.senkuro.tamdok",
     "name": "Senkuro",
-    "version": 3,
+    "version": 4,
     "url": "https://senkuro.me",
     "contentRating": 1,
-    "languages": ["ru"],
+    "languages": [
+      "ru"
+    ],
     "minAppVersion": "0.1.3"
   },
   "listings": [
     {
       "id": "latest-updates",
       "name": "Свежие обновления",
+      "kind": "list"
+    },
+    {
+      "id": "new-titles",
+      "name": "Новые тайтлы",
       "kind": "list"
     }
   ],
