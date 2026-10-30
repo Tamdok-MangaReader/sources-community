@@ -23,7 +23,7 @@ async function fetchResponse(ctx, url, { allowStatuses = [], headers } = {}) {
       return response;
     } catch (error) {
       lastError = error;
-      if (error.fatal || attempt === MAX_ATTEMPTS) break;
+      if (error.fatal || error.name === "AbortError" || attempt === MAX_ATTEMPTS) break;
       await sleep(500 * attempt);
     }
   }

@@ -63,7 +63,7 @@ async function apiGet(ctx, path) {
       return await response.json();
     } catch (error) {
       lastError = error;
-      if (error.fatal || attempt === MAX_ATTEMPTS) break;
+      if (error.fatal || error.name === "AbortError" || attempt === MAX_ATTEMPTS) break;
       await sleep(600 * attempt);
     }
   }
@@ -196,7 +196,7 @@ function scroller(title, id, entries, kind = "scroller") {
 
 const source = {
   async getHome(ctx) {
-    const ids = ["popular-today", "popular-week", "popular", "latest"];
+    const ids = ["popular-today", "popular-week", "latest"];
     const results = await Promise.allSettled(
       ids.map((id) => search(ctx, "", 1, [{ type: "sort", index: LISTINGS[id].sort }])),
     );
@@ -204,7 +204,7 @@ const source = {
     results.forEach((result, index) => {
       if (result.status !== "fulfilled" || !result.value.entries.length) return;
       const id = ids[index];
-      const kind = index === 0 ? "bigScroller" : index === 3 ? "scroller" : "mangaList";
+      const kind = index === 0 ? "bigScroller" : "scroller";
       components.push(scroller(LISTINGS[id].name, id, result.value.entries.slice(0, 12), kind));
     });
     if (!components.length) {

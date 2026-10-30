@@ -38,7 +38,7 @@ async function getHtml(ctx, url) {
       return response.html();
     } catch (error) {
       lastError = error;
-      if (error.fatal || attempt === MAX_ATTEMPTS) break;
+      if (error.fatal || error.name === "AbortError" || attempt === MAX_ATTEMPTS) break;
       await sleep(800 * attempt);
     }
   }

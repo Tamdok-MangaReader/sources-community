@@ -86,7 +86,7 @@ async function apiGet(ctx, path, params = []) {
       return await response.json();
     } catch (error) {
       lastError = error;
-      if (error.fatal || attempt === MAX_ATTEMPTS) break;
+      if (error.fatal || error.name === "AbortError" || attempt === MAX_ATTEMPTS) break;
       await sleep(700 * attempt);
     }
   }

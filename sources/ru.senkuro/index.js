@@ -6,7 +6,7 @@ const DEFAULT_RATING = "suggestive";
 
 const PAGE_SIZE = 20;
 const RAW_PAGES_WITH_FILTERS = 3;
-const MAX_ATTEMPTS = 2;
+const MAX_ATTEMPTS = 4;
 
 const MANGA_CARD = `
   slug
@@ -184,8 +184,8 @@ async function graphql(ctx, query, variables = {}) {
       return result.data;
     } catch (error) {
       lastError = error;
-      if (error.fatal || attempt === MAX_ATTEMPTS) break;
-      await sleep(400 * attempt);
+      if (error.fatal || error.name === "AbortError" || attempt === MAX_ATTEMPTS) break;
+      await sleep(700 * attempt);
     }
   }
   console.log(tag("GraphQL"), lastError?.message ?? String(lastError));
@@ -506,18 +506,39 @@ function parseHomeChapters(html, baseUrl) {
 
 const source = {
   async getHome(ctx) {
-    const [popular, latestChapters, fresh, recommended] = await Promise.allSettled([
-      graphql(ctx, POPULAR_QUERY).then((data) =>
-        (data.mangaPopularByPeriod ?? []).map(toEntry).filter(Boolean),
-      ),
-      requestHeaders(ctx)
-        .then((headers) => ctx.request.get(BASE_URL, { headers }))
-        .then((response) => parseHomeChapters(response.html(), response.url)),
-      fetchBrowse(ctx, ORDERS[1], 1).then((result) => result.entries),
-      graphql(ctx, RECOMMENDATIONS_QUERY).then((data) =>
-        (data.mangaRecommendations ?? []).map(toEntry).filter(Boolean),
-      ),
-    ]);
+    const sections = [
+      () =>
+        graphql(ctx, POPULAR_QUERY).then((data) =>
+          (data.mangaPopularByPeriod ?? []).map(toEntry).filter(Boolean),
+        ),
+      () =>
+        requestHeaders(ctx)
+          .then((headers) => ctx.request.get(BASE_URL, { headers }))
+          .then((response) => parseHomeChapters(response.html(), response.url)),
+      () => fetchBrowse(ctx, ORDERS[1], 1).then((result) => result.entries),
+      () =>
+        graphql(ctx, RECOMMENDATIONS_QUERY).then((data) =>
+          (data.mangaRecommendations ?? []).map(toEntry).filter(Boolean),
+        ),
+    ];
+    const loadSection = async (run) => {
+      let last;
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+          const value = await run();
+          if (value.length) return value;
+          last = new Error(`${SITE_NAME}: пустая секция`);
+        } catch (error) {
+          last = error;
+          if (error?.name === "AbortError") break;
+        }
+        await sleep(900 * attempt);
+      }
+      throw last;
+    };
+    const [popular, latestChapters, fresh, recommended] = await Promise.allSettled(
+      sections.map((run) => loadSection(run)),
+    );
     const components = [];
     if (popular.status === "fulfilled" && popular.value.length) {
       components.push(scroller("Популярное за день", null, popular.value));
