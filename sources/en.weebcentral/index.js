@@ -116,6 +116,25 @@ function buildFilters(query, filters) {
   return qs + extra;
 }
 
+function coverOf(card, key) {
+  const img = card.querySelector("img");
+  const candidates = [
+    img?.getAttribute("src"),
+    img?.getAttribute("data-src"),
+    card.querySelector("source")?.getAttribute("srcset"),
+    img?.getAttribute("srcset"),
+  ];
+  for (const raw of candidates) {
+    const first = String(raw ?? "").trim().split(/\s+/)[0];
+    if (first && !first.startsWith("data:")) {
+      const url = absolute(first);
+      if (url) return url;
+    }
+  }
+  const id = String(key ?? "").split("/")[2];
+  return id ? `https://temp.compsci88.com/cover/fallback/${id}.jpg` : undefined;
+}
+
 function parseCards(root, selector) {
   return Array.from(root.querySelectorAll(selector))
     .map((card) => {
@@ -126,7 +145,7 @@ function parseCards(root, selector) {
       return {
         key,
         title: title || key,
-        cover: absolute(card.querySelector("img")?.getAttribute("src")),
+        cover: coverOf(card, key),
         url: absolute(key),
       };
     })
