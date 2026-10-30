@@ -470,13 +470,45 @@ const source = {
     const cfg = settings(ctx);
     const raw = String(text ?? "").normalize("NFC").trim();
     const filterParams = activeFilters(filters);
-    const run = (value) =>
-      fetchList(ctx, cfg, "/manga", [...(value ? [["q", value]] : []), ...filterParams], page ?? 1);
-    const result = await run(raw);
-    if (!result.entries.length && raw && raw !== raw.toLowerCase()) {
-      return run(raw.toLowerCase());
+    const pageNumber = page ?? 1;
+    const run = async (value, withFilters) => {
+      const result = await fetchList(
+        ctx,
+        cfg,
+        "/manga",
+        [...(value ? [["q", value]] : []), ...(withFilters ? filterParams : [])],
+        pageNumber,
+      );
+      console.log(
+        tag("search"),
+        JSON.stringify(value),
+        withFilters ? "filters" : "plain",
+        "->",
+        result.entries.length,
+      );
+      return result;
+    };
+    const variants = [];
+    const push = (value) => {
+      if (value && !variants.includes(value)) variants.push(value);
+    };
+    push(raw);
+    push(raw.toLowerCase());
+    push(raw.toLowerCase().replace(/ё/g, "е"));
+    push(raw.toLowerCase().replace(/е/g, "ё"));
+    let first = null;
+    for (const value of variants) {
+      const result = await run(value, true);
+      first = first ?? result;
+      if (result.entries.length) return result;
     }
-    return result;
+    if (raw && filterParams.length) {
+      for (const value of variants) {
+        const result = await run(value, false);
+        if (result.entries.length) return result;
+      }
+    }
+    return first ?? { entries: [], hasNextPage: false };
   },
 
   async getMangaUpdate(manga, needsDetails, needsChapters, ctx) {
