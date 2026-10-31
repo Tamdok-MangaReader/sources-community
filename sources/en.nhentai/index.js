@@ -197,9 +197,22 @@ function scroller(title, id, entries, kind = "scroller") {
 const source = {
   async getHome(ctx) {
     const ids = ["popular-today", "popular-week", "latest"];
-    const results = await Promise.allSettled(
-      ids.map((id) => search(ctx, "", 1, [{ type: "sort", index: LISTINGS[id].sort }])),
-    );
+    // Sequential with one retry: three simultaneous searches trip the site's rate limit on a cold start,
+    // which used to leave the first home load empty.
+    const results = [];
+    for (const id of ids) {
+      let outcome;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          outcome = { status: "fulfilled", value: await search(ctx, "", 1, [{ type: "sort", index: LISTINGS[id].sort }]) };
+          break;
+        } catch (reason) {
+          outcome = { status: "rejected", reason };
+          await new Promise((resolve) => setTimeout(resolve, 800));
+        }
+      }
+      results.push(outcome);
+    }
     const components = [];
     results.forEach((result, index) => {
       if (result.status !== "fulfilled" || !result.value.entries.length) return;

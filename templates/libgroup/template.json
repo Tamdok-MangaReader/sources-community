@@ -108,20 +108,24 @@
     {
       "type": "group",
       "title": "Аккаунт",
-      "footer": "Для доступа к закрытому контенту вставьте access_token (или значение auth из localStorage сайта) в поле ниже.",
+      "footer": "Нажмите «Войти», авторизуйтесь на сайте и нажмите «Сохранить»: токен доступа будет скопирован автоматически. Его можно и вставить вручную (access_token или значение auth из localStorage сайта).",
       "items": [
+        {
+          "type": "login",
+          "id": "login",
+          "title": "Войти и сохранить токен",
+          "url": "{{config.baseUrl}}",
+          "captureLocalStorage": {
+            "key": "auth",
+            "setting": "authToken"
+          }
+        },
         {
           "type": "text",
           "id": "authToken",
           "title": "Токен доступа",
           "default": "",
           "secure": true
-        },
-        {
-          "type": "link",
-          "id": "login",
-          "title": "Открыть сайт",
-          "url": "{{config.baseUrl}}"
         }
       ]
     }
