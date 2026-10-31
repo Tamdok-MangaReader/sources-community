@@ -18,7 +18,6 @@ See [docs](https://github.com/Tamdok-MangaReader/sources-community/wiki) for ful
 ```
 sources/
   en.asurascans/       Reference source (Asura Scans)
-  en.batcave/          Western comics (right-to-left by default)
   en.readcomicsonline/ Western comics (right-to-left by default)
   multi.mangaplus/     MANGA Plus: protobuf API + encrypted images (needs getBytes / files.saveImage)
   multi.mangafire/     MangaFire with VRF request signing
