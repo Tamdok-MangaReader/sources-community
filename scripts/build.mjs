@@ -9,6 +9,7 @@ import {
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { zipSync } from "fflate";
+import { composeSource } from "./lib/compose.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const sourcesDir = join(root, "sources");
@@ -68,11 +69,9 @@ for (const folder of readdirSync(sourcesDir, { withFileTypes: true }).filter(
 )) {
   if (folder.name === "template") continue;
 
-  const sourcePath = join(sourcesDir, folder.name);
-  const manifest = JSON.parse(
-    readFileSync(join(sourcePath, "source.json"), "utf8"),
-  );
-  const script = readFileSync(join(sourcePath, "index.js"), "utf8");
+  // composeSource resolves plain sources as-is and expands templated ones
+  // (source.json with a "template" key) into a self-contained index.js.
+  const { manifest, script, filtersPath, iconPath } = composeSource(folder.name);
   const files = {
     "Payload/source.json": new TextEncoder().encode(JSON.stringify(manifest)),
     "Payload/index.js": new TextEncoder().encode(script),
@@ -84,14 +83,12 @@ for (const folder of readdirSync(sourcesDir, { withFileTypes: true }).filter(
     );
   }
 
-  const filtersPath = join(sourcePath, "filters.json");
-  if (existsSync(filtersPath)) {
+  if (filtersPath) {
     files["Payload/filters.json"] = readFileSync(filtersPath);
   }
 
-  const iconPath = join(sourcePath, "icon.png");
   let iconURL;
-  if (existsSync(iconPath)) {
+  if (iconPath) {
     const iconBytes = readFileSync(iconPath);
     files["Payload/icon.png"] = iconBytes;
     const iconFileName = `${manifest.info.id}-v${manifest.info.version}.png`;

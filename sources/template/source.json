@@ -6,6 +6,6 @@
     "url": "https://example.com",
     "contentRating": 0,
     "languages": ["en"],
-    "minAppVersion": "0.1.0"
+    "minAppVersion": "1.3"
   }
 }

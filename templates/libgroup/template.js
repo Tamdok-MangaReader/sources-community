@@ -1,6 +1,9 @@
-const SITE_ID = 4;
-const SITE_NAME = "HentaiLib";
-const DEFAULT_BASE_URL = "https://hentailib.me";
+/* global CONFIG, HOOKS */
+// Shared LibGroup engine (MangaLib, SlashLib, HentaiLib share one API).
+// CONFIG comes from the source's source.json "config"; see templates/libgroup/template.json.
+const SITE_ID = CONFIG.siteId;
+const SITE_NAME = CONFIG.siteName;
+const DEFAULT_BASE_URL = CONFIG.baseUrl;
 const DEFAULT_API_URL = "https://api.cdnlibs.org";
 
 const USER_AGENT =
@@ -580,6 +583,3 @@ const source = {
   },
 };
 
-if (typeof module !== "undefined") {
-  module.exports = { source };
-}

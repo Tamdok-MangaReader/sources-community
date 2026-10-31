@@ -1,0 +1,146 @@
+{
+  "info": {
+    "id": "multi.mangaplus.tamdok",
+    "name": "MANGA Plus",
+    "version": 1,
+    "url": "https://mangaplus.shueisha.co.jp",
+    "contentRating": 0,
+    "languages": ["en", "es", "fr", "id", "pt-BR", "ru", "th", "vi", "de"],
+    "minAppVersion": "1.3"
+  },
+  "config": {
+    "skipHomeEnrichment": true
+  },
+  "listings": [
+    {
+      "id": "Updates",
+      "name": "Updates",
+      "kind": "grid"
+    },
+    {
+      "id": "Ranking",
+      "name": "Ranking",
+      "kind": "list"
+    }
+  ],
+  "settings": [
+    {
+      "type": "group",
+      "title": "Settings",
+      "items": [
+        {
+          "type": "select",
+          "id": "language",
+          "title": "Title language",
+          "options": [
+            {
+              "id": "all",
+              "label": "All"
+            },
+            {
+              "id": "en",
+              "label": "English"
+            },
+            {
+              "id": "es",
+              "label": "Español"
+            },
+            {
+              "id": "fr",
+              "label": "Français"
+            },
+            {
+              "id": "id",
+              "label": "Bahasa Indonesia"
+            },
+            {
+              "id": "pt-BR",
+              "label": "Português (Brasil)"
+            },
+            {
+              "id": "ru",
+              "label": "Русский"
+            },
+            {
+              "id": "th",
+              "label": "ไทย"
+            },
+            {
+              "id": "vi",
+              "label": "Tiếng Việt"
+            },
+            {
+              "id": "de",
+              "label": "Deutsch"
+            }
+          ],
+          "default": "en"
+        },
+        {
+          "type": "select",
+          "id": "imgQuality",
+          "title": "Image quality",
+          "options": [
+            {
+              "id": "low",
+              "label": "Low"
+            },
+            {
+              "id": "high",
+              "label": "Medium"
+            },
+            {
+              "id": "super_high",
+              "label": "High"
+            }
+          ],
+          "default": "super_high"
+        },
+        {
+          "type": "switch",
+          "id": "split",
+          "title": "Split double pages",
+          "default": false
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "title": "Mobile API",
+      "footer": "These values can be obtained from the MANGA Plus mobile app, for example with a network sniffer. They are required to use the mobile API endpoints.",
+      "items": [
+        {
+          "type": "switch",
+          "id": "mobile",
+          "title": "Use Mobile API",
+          "default": false
+        },
+        {
+          "type": "text",
+          "id": "os",
+          "title": "os",
+          "default": ""
+        },
+        {
+          "type": "text",
+          "id": "osVer",
+          "title": "os_ver",
+          "default": ""
+        },
+        {
+          "type": "text",
+          "id": "appVer",
+          "title": "app_ver",
+          "default": ""
+        },
+        {
+          "type": "text",
+          "id": "secret",
+          "title": "secret",
+          "default": "",
+          "secure": true
+        }
+      ]
+    }
+  ]
+}

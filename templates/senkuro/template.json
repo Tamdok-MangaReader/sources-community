@@ -1,0 +1,40 @@
+{
+  "requiredConfig": [
+    "siteName",
+    "baseUrl",
+    "apiUrl",
+    "defaultRating"
+  ],
+  "info": {
+    "languages": [
+      "ru"
+    ],
+    "minAppVersion": "1.3"
+  },
+  "listings": [
+    {
+      "id": "latest-updates",
+      "name": "Свежие обновления",
+      "kind": "list"
+    },
+    {
+      "id": "new-titles",
+      "name": "Новые тайтлы",
+      "kind": "list"
+    }
+  ],
+  "settings": [
+    {
+      "type": "group",
+      "title": "Авторизация",
+      "items": [
+        {
+          "type": "login",
+          "id": "login",
+          "title": "Авторизироваться",
+          "url": "{{config.baseUrl}}/"
+        }
+      ]
+    }
+  ]
+}

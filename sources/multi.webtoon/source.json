@@ -1,0 +1,53 @@
+{
+  "info": {
+    "id": "multi.webtoon.tamdok",
+    "name": "WEBTOON",
+    "version": 1,
+    "url": "https://www.webtoons.com",
+    "contentRating": 0,
+    "languages": ["en", "zh-Hant", "th", "id", "es", "fr", "de"],
+    "minAppVersion": "1.3"
+  },
+  "listings": [
+    { "id": "latest", "name": "Latest", "kind": "grid" },
+    { "id": "popular", "name": "Popular", "kind": "grid" },
+    { "id": "top", "name": "Top", "kind": "grid" }
+  ],
+  "settings": [
+    {
+      "type": "group",
+      "title": "Settings",
+      "items": [
+        {
+          "type": "select",
+          "id": "language",
+          "title": "Language",
+          "options": [
+            { "id": "en", "label": "English" },
+            { "id": "zh-hant", "label": "中文 (繁體)" },
+            { "id": "th", "label": "ไทย" },
+            { "id": "id", "label": "Bahasa Indonesia" },
+            { "id": "es", "label": "Español" },
+            { "id": "fr", "label": "Français" },
+            { "id": "de", "label": "Deutsch" }
+          ],
+          "default": "en"
+        },
+        {
+          "type": "switch",
+          "id": "optionalPages",
+          "title": "Show Optional Pages",
+          "subtitle": "Warning pages, author notes, etc.",
+          "default": true
+        },
+        {
+          "type": "switch",
+          "id": "canvasSeries",
+          "title": "Show Canvas Series",
+          "subtitle": "Canvas series are published by independent creators",
+          "default": true
+        }
+      ]
+    }
+  ]
+}

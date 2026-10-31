@@ -2,127 +2,14 @@
   "info": {
     "id": "ru.slashlib.tamdok",
     "name": "SlashLib",
-    "version": 7,
+    "version": 8,
     "url": "https://slashlib.me",
-    "contentRating": 2,
-    "languages": [
-      "ru"
-    ],
-    "minAppVersion": "0.1.3"
+    "contentRating": 2
   },
-  "listings": [
-    {
-      "id": "popular",
-      "name": "Популярное",
-      "kind": "list"
-    },
-    {
-      "id": "currently_reading",
-      "name": "Сейчас читают",
-      "kind": "list"
-    },
-    {
-      "id": "latest",
-      "name": "Последние обновления",
-      "kind": "list"
-    }
-  ],
-  "settings": [
-    {
-      "type": "group",
-      "title": "Настройки",
-      "items": [
-        {
-          "type": "text",
-          "id": "baseUrl",
-          "title": "Веб домен",
-          "default": "https://slashlib.me"
-        },
-        {
-          "type": "select",
-          "id": "apiUrl",
-          "title": "Домен API",
-          "options": [
-            {
-              "id": "https://api.cdnlibs.org",
-              "label": "Резервный (api.cdnlibs.org)"
-            },
-            {
-              "id": "https://hapi.hentaicdn.org",
-              "label": "Резервный 2 (hapi.hentaicdn.org)"
-            },
-            {
-              "id": "https://api.imglib.info",
-              "label": "Официальное приложение (api.imglib.info)"
-            }
-          ],
-          "default": "https://hapi.hentaicdn.org"
-        },
-        {
-          "type": "select",
-          "id": "imageServerUrl",
-          "title": "Сервер изображений",
-          "options": [
-            {
-              "id": "compress",
-              "label": "Сжатия"
-            },
-            {
-              "id": "main",
-              "label": "Первый"
-            },
-            {
-              "id": "secondary",
-              "label": "Второй"
-            }
-          ],
-          "default": "compress"
-        },
-        {
-          "type": "select",
-          "id": "coverQuality",
-          "title": "Качество обложки",
-          "options": [
-            {
-              "id": "thumbnail",
-              "label": "Миниатюра"
-            },
-            {
-              "id": "default",
-              "label": "Стандартное"
-            },
-            {
-              "id": "md",
-              "label": "Среднее"
-            },
-            {
-              "id": "orig",
-              "label": "Оригинал"
-            }
-          ],
-          "default": "default"
-        }
-      ]
-    },
-    {
-      "type": "group",
-      "title": "Аккаунт",
-      "footer": "Для доступа к закрытому контенту вставьте access_token (или значение auth из localStorage сайта) в поле ниже.",
-      "items": [
-        {
-          "type": "text",
-          "id": "authToken",
-          "title": "Токен доступа",
-          "default": "",
-          "secure": true
-        },
-        {
-          "type": "link",
-          "id": "login",
-          "title": "Открыть сайт",
-          "url": "https://slashlib.me"
-        }
-      ]
-    }
-  ]
+  "template": "libgroup",
+  "config": {
+    "siteId": 2,
+    "siteName": "SlashLib",
+    "baseUrl": "https://slashlib.me"
+  }
 }

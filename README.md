@@ -18,17 +18,30 @@ See [docs](https://github.com/Tamdok-MangaReader/sources-community/wiki) for ful
 ```
 sources/
   en.asurascans/       Reference source (Asura Scans)
-  template/            Starter template (not built)
+  en.batcave/          Western comics (right-to-left by default)
+  en.readcomicsonline/ Western comics (right-to-left by default)
+  multi.mangaplus/     MANGA Plus: protobuf API + encrypted images (needs getBytes / files.saveImage)
+  multi.mangafire/     MangaFire with VRF request signing
+  multi.webtoon/       WEBTOON, ko.naverwebtoon/ for Naver
+  ru.mangalib/         Templated source (source.json only, uses templates/libgroup)
+  template/            Starter source (not built)
+templates/
+  libgroup/            Shared engine for sites on the same platform
 scripts/
   build.mjs            Builds .tamdok packages and index.min.json
+  emit.mjs             Writes a composed source to .build/ for testing
+  lib/compose.mjs      Expands templated sources
 static/
   open.html            GitHub Pages redirect to open Tamdok
 public/
   index.min.json       Registry for the app
   sources/             Built packages
   icons/               Icons for the registry
-docs/                  Author documentation
 ```
+
+## Templates
+
+Sites on a common engine share code from `templates/<name>/`. A templated source is just a `source.json` with `"template"` and `"config"`; the build inlines the template into a normal package. See [Templates](https://github.com/Tamdok-MangaReader/sources-community/wiki/Templates). Bump the version of every dependent source when a template changes.
 
 ## Documentation
 
@@ -64,6 +77,12 @@ module.exports = { source };
 ```
 
 Optional: `getHome`, `getListings`, `getMangaList`, `getFilters`.
+
+Manifest `config` flags: `hidesFiltersWhileSearching`, `skipHomeEnrichment` (see [Home layout](https://github.com/Tamdok-MangaReader/sources-community/wiki/Home-layout)).
+
+Context helpers: `ctx.request.{get,post,fetch,getBytes}`, `ctx.defaults`, `ctx.cookies` (a promise), `ctx.files.saveImage`. Binary helpers need Tamdok with binary support; set `minAppVersion` in `source.json` accordingly. Full reference in the [API wiki page](https://github.com/Tamdok-MangaReader/sources-community/wiki/API-reference).
+
+Western comics should return `viewer: "rtl"` on each manga to open in right-to-left mode by default.
 
 Reference implementation: [sources/en.asurascans/index.js](sources/en.asurascans/index.js).
 

@@ -6,7 +6,7 @@
     "url": "https://remanga.org",
     "contentRating": 1,
     "languages": ["ru"],
-    "minAppVersion": "0.1.3"
+    "minAppVersion": "1.3"
   },
   "listings": [
     { "id": "latest", "name": "Обновления", "kind": "list" },

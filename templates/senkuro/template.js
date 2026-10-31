@@ -1,8 +1,11 @@
 "use strict";
-const BASE_URL = "https://senkuro.me";
-const API_URL = "https://api.senkuro.me/graphql";
-const SITE_NAME = "Senkuro";
-const DEFAULT_RATING = "suggestive";
+/* global CONFIG, HOOKS */
+// Shared Senkuro engine (Senkuro and Senkognito use the same GraphQL backend).
+// CONFIG comes from the source's source.json "config"; see templates/senkuro/template.json.
+const BASE_URL = CONFIG.baseUrl;
+const API_URL = CONFIG.apiUrl;
+const SITE_NAME = CONFIG.siteName;
+const DEFAULT_RATING = CONFIG.defaultRating;
 
 const PAGE_SIZE = 20;
 const RAW_PAGES_WITH_FILTERS = 3;
@@ -652,6 +655,3 @@ const source = {
   },
 };
 
-if (typeof module !== "undefined") {
-  module.exports = { source };
-}
