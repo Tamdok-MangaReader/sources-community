@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Community sources for the Tamdok manga reader. Add the repository in the app to install and update sources." />
+    <title>Tamdok Community Sources</title>
+    <link rel="canonical" href="https://tamdok-mangareader.github.io/sources-community" />
+    <meta property="og:title" content="Tamdok Community Sources" />
+    <meta property="og:description" content="Community sources for the Tamdok manga reader." />
+    <meta property="og:url" content="https://tamdok-mangareader.github.io/sources-community" />
+    <link rel="icon" href="icons/registry.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero-inner">
+        <a class="github" href="https://github.com/Tamdok-MangaReader/sources-community" target="_blank" rel="noopener" aria-label="GitHub repository">
+          <svg viewBox="0 0 16 16" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.19 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+        <img class="hero-icon" id="registry-icon" src="icons/registry.png" alt="" width="72" height="72" hidden />
+        <h1>Tamdok Community Sources</h1>
+        <p class="lead">Every Tamdok source in one place. Add a repository to the app to install and update its sources in one tap.</p>
+        <div class="registries">
+          <article class="registry" data-registry="official">
+            <h2>Official</h2>
+            <p>Maintained by the Tamdok team: server integrations such as Komga, Suwayomi, Kavita and LANraragi.</p>
+            <div class="actions">
+              <a class="btn btn-primary add-repo" hidden href="#">Add to Tamdok</a>
+              <button class="btn copy-url" type="button">Copy URL</button>
+            </div>
+            <code class="registry-url"></code>
+          </article>
+          <article class="registry" data-registry="community">
+            <h2>Community</h2>
+            <p>Site and scanlation sources written by contributors, from MangaDex to MangaLib.</p>
+            <div class="actions">
+              <a class="btn btn-primary add-repo" hidden href="#">Add to Tamdok</a>
+              <button class="btn copy-url" type="button">Copy URL</button>
+            </div>
+            <code class="registry-url"></code>
+          </article>
+        </div>
+        <p class="hint">Requires <strong>Tamdok 0.1.1</strong> or newer. In the app: Settings → Sources → add a repository.</p>
+      </div>
+    </header>
+
+    <main>
+      <section class="toolbar" aria-label="Filters">
+        <label class="search">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="m21 21-4.3-4.3M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"/></svg>
+          <input id="search" type="search" placeholder="Search by name or site" autocomplete="off" spellcheck="false" />
+        </label>
+        <label class="select">
+          <span class="sr-only">Language</span>
+          <select id="language"><option value="">All languages</option></select>
+        </label>
+        <div class="filters-row">
+        <div class="segmented" id="registry" role="radiogroup" aria-label="Repository">
+          <button type="button" role="radio" aria-checked="true" data-value="">All repos</button>
+          <button type="button" role="radio" aria-checked="false" data-value="official">Official</button>
+          <button type="button" role="radio" aria-checked="false" data-value="community">Community</button>
+        </div>
+        <div class="segmented" id="rating" role="radiogroup" aria-label="Content rating">
+          <button type="button" role="radio" aria-checked="true" data-value="">All</button>
+          <button type="button" role="radio" aria-checked="false" data-value="safe">Safe</button>
+          <button type="button" role="radio" aria-checked="false" data-value="mixed">Mixed</button>
+          <button type="button" role="radio" aria-checked="false" data-value="nsfw">NSFW</button>
+        </div>
+        </div>
+      </section>
+
+      <p class="count" id="count" aria-live="polite"></p>
+      <noscript><p class="notice">JavaScript is required to browse and filter sources.</p></noscript>
+      <div id="list"></div>
+      <p class="notice" id="empty" hidden>No sources match your filters.</p>
+    </main>
+
+    <footer>
+      <p>Sources are provided by the community and are not affiliated with the websites they connect to.</p>
+    </footer>
+    <script src="main.js" defer></script>
+  </body>
+</html>
